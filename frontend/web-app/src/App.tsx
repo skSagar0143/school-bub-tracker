@@ -1,227 +1,267 @@
-import { FormEvent, useCallback, useEffect, useState } from 'react'
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
 import './App.css'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/sm'
 
+type UserRole = 'SCHOOL_ADMIN' | 'DRIVER' | 'STUDENT' | 'PARENT'
+type LoginUser = { id: string; fullName: string; email: string; role: UserRole; enabled: boolean }
+type LoginResponse = { tokenType: string; accessToken: string; refreshToken: string; expiresInSeconds: number; user: LoginUser }
+type Menu = { id: number; code: string; title: string; path: string | null; icon: string | null; sortOrder: number; children: Menu[] }
+type MenuResponse = { role: UserRole; defaultPath: string; menus: Menu[] }
+type Driver = { id: string; fullName: string; email: string; role: UserRole; enabled: boolean; createdAt: string; updatedAt: string }
 type School = {
-  id: number
-  name: string
-  code: string
-  email: string | null
-  phone: string | null
-  website: string | null
-  addressLine1: string
-  addressLine2: string | null
-  city: string
-  state: string
-  pincode: string
-  country: string
-  status: 'ACTIVE' | 'INACTIVE'
-  createdAt: string
-  updatedAt: string
+  id: number; name: string; code: string; email: string | null; phone: string | null; website: string | null
+  addressLine1: string; addressLine2: string | null; city: string; state: string; pincode: string; country: string
+  status: 'ACTIVE' | 'INACTIVE'; createdAt: string; updatedAt: string
 }
-
 type SchoolForm = Omit<School, 'id' | 'status' | 'createdAt' | 'updatedAt'>
+type DriverForm = { fullName: string; email: string; password: string }
+const emptySchool: SchoolForm = { name: '', code: '', email: '', phone: '', website: '', addressLine1: '', addressLine2: '', city: '', state: '', pincode: '', country: 'India' }
+const emptyDriver: DriverForm = { fullName: '', email: '', password: '' }
 
-const emptyForm: SchoolForm = {
-  name: '', code: '', email: '', phone: '', website: '',
-  addressLine1: '', addressLine2: '', city: '', state: '',
-  pincode: '', country: 'India',
-}
-
-async function schoolRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = localStorage.getItem('accessToken')
+async function api<T>(path: string, token: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
+    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...options.headers },
   })
   if (!response.ok) {
-    const message = await response.text()
-    if (response.status === 401 || response.status === 403) {
-      throw new Error('Login required or your account does not have School Admin permission. Please sign in with a SCHOOL_ADMIN account.')
-    }
-    throw new Error(message || `Request failed (${response.status})`)
+    let message = `Request failed (${response.status})`
+    try { const body = await response.json(); message = body.message || message } catch { /* keep fallback */ }
+    throw new Error(message)
   }
   if (response.status === 204) return undefined as T
   return response.json() as Promise<T>
 }
 
 function App() {
-  const [school, setSchool] = useState<School | null>(null)
-  const [form, setForm] = useState<SchoolForm>(emptyForm)
-  const [editing, setEditing] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
+  const [token, setToken] = useState(localStorage.getItem('accessToken') || '')
+  const [user, setUser] = useState<LoginUser | null>(() => {
+    try { return JSON.parse(localStorage.getItem('currentUser') || 'null') as LoginUser | null } catch { return null }
+  })
+  const [menus, setMenus] = useState<Menu[]>([])
+  const [currentPath, setCurrentPath] = useState(window.location.pathname || '/')
+  const [loginEmail, setLoginEmail] = useState('')
+  const [loginPassword, setLoginPassword] = useState('')
+  const [loginBusy, setLoginBusy] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
-  const [token, setToken] = useState(localStorage.getItem('accessToken') || '')
 
-  const loadSchool = useCallback(async () => {
-    setLoading(true)
+  const navigate = useCallback((path: string) => {
+    if (!path) return
+    window.history.pushState({}, '', path)
+    setCurrentPath(path)
     setError('')
-    try {
-      const data = await schoolRequest<School[]>('/school')
-      const current = data[0] ?? null
-      setSchool(current)
-      if (current) {
-        const { id: _id, status: _status, createdAt: _created, updatedAt: _updated, ...details } = current
-        setForm(details)
-      } else {
-        setForm(emptyForm)
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to load school details.')
-    } finally {
-      setLoading(false)
-    }
+    setNotice('')
   }, [])
 
-  useEffect(() => { void loadSchool() }, [loadSchool])
+  const loadMenus = useCallback(async (accessToken: string, redirect = false) => {
+    const result = await api<MenuResponse>('/menu/me', accessToken)
+    setMenus(result.menus || [])
+    if (redirect || !result.menus.some(menuHasPath(currentPath))) navigate(result.defaultPath || '/')
+  }, [currentPath, navigate])
 
-  function updateField(field: keyof SchoolForm, value: string) {
-    setForm(current => ({ ...current, [field]: value }))
+  useEffect(() => {
+    const onPopState = () => setCurrentPath(window.location.pathname)
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [])
+
+  useEffect(() => {
+    if (!token) return
+    let active = true
+    setLoading(true)
+    api<MenuResponse>('/menu/me', token)
+      .then(result => { if (active) { setMenus(result.menus || []); if (currentPath === '/' || currentPath === '/login') navigate(result.defaultPath || '/') } })
+      .catch(() => { if (active) logout() })
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+    // Initial session restoration only; navigation is handled separately.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  function logout() {
+    localStorage.removeItem('accessToken')
+    localStorage.removeItem('currentUser')
+    setToken('')
+    setUser(null)
+    setMenus([])
+    navigate('/login')
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    setSaving(true)
-    setError('')
-    setNotice('')
+    setLoginBusy(true); setError('')
     try {
-      const saved = await schoolRequest<School>(school ? `/school/${school.id}` : '/school', {
-        method: school ? 'PUT' : 'POST',
-        body: JSON.stringify(form),
-      })
-      setSchool(saved)
-      setEditing(false)
-      setNotice(school ? 'School details updated successfully.' : 'School profile created successfully.')
-      await loadSchool()
+      const result = await api<LoginResponse>('/auth/login', '', { method: 'POST', body: JSON.stringify({ email: loginEmail.trim(), password: loginPassword }) })
+      localStorage.setItem('accessToken', result.accessToken)
+      localStorage.setItem('currentUser', JSON.stringify(result.user))
+      setToken(result.accessToken); setUser(result.user)
+      const menuResult = await api<MenuResponse>('/menu/me', result.accessToken)
+      setMenus(menuResult.menus || [])
+      navigate(menuResult.defaultPath || '/')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to save school details.')
-    } finally {
-      setSaving(false)
-    }
+      localStorage.removeItem('accessToken'); localStorage.removeItem('currentUser')
+      setError(err instanceof Error ? err.message : 'Unable to sign in. Check your credentials.')
+    } finally { setLoginBusy(false) }
   }
 
-  async function changeStatus() {
-    if (!school) return
-    const nextStatus = school.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
-    setError('')
-    setNotice('')
-    try {
-      const updated = await schoolRequest<School>(`/school/${school.id}/status`, {
-        method: 'PATCH',
-        body: JSON.stringify({ status: nextStatus }),
-      })
-      setSchool(updated)
-      setNotice(`School marked ${nextStatus.toLowerCase()}.`)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to update school status.')
-    }
-  }
+  const activeMenu = useMemo(() => flattenMenus(menus).find(item => item.path === currentPath), [menus, currentPath])
 
-  function saveToken(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (token.trim()) localStorage.setItem('accessToken', token.trim())
-    else localStorage.removeItem('accessToken')
-    setNotice('Access token saved in this browser. Reloading school data…')
-    void loadSchool()
+  if (!token || !user) {
+    return <LoginPage email={loginEmail} password={loginPassword} setEmail={setLoginEmail} setPassword={setLoginPassword} onSubmit={handleLogin} busy={loginBusy} error={error} />
   }
-
-  const fields: { key: keyof SchoolForm; label: string; required?: boolean; type?: string }[] = [
-    { key: 'name', label: 'School name', required: true },
-    { key: 'code', label: 'School code', required: true },
-    { key: 'email', label: 'Official email', type: 'email' },
-    { key: 'phone', label: 'Phone number' },
-    { key: 'website', label: 'Website' },
-    { key: 'addressLine1', label: 'Address line 1', required: true },
-    { key: 'addressLine2', label: 'Address line 2' },
-    { key: 'city', label: 'City', required: true },
-    { key: 'state', label: 'State', required: true },
-    { key: 'pincode', label: 'PIN code', required: true },
-    { key: 'country', label: 'Country', required: true },
-  ]
 
   return (
     <main className="app-shell">
       <aside className="sidebar">
-        <div className="brand"><span className="brand-mark">SR</span><span>SchoolRoute<small>BUS MANAGEMENT</small></span></div>
-        <p className="nav-caption">ADMINISTRATION</p>
-        <button className="nav-item active"><span>▦</span> School profile</button>
-        <div className="sidebar-note"><span className="note-dot" /> Single-school setup</div>
-        <div className="sidebar-footer">SchoolRoute <span>Admin Console</span></div>
+        <div className="brand"><span className="brand-mark">SR</span><span>SchoolRoute<small>SCHOOL BUS MANAGEMENT</small></span></div>
+        <p className="nav-caption">WORKSPACE</p>
+        <nav className="menu-tree">{menus.map(menu => <MenuItem key={menu.id} menu={menu} currentPath={currentPath} navigate={navigate} />)}</nav>
+        <div className="sidebar-note"><span className="note-dot" /> Secure role-based access</div>
+        <div className="sidebar-footer"><strong>{user.fullName}</strong><span>{user.role.replace('_', ' ')}</span><button className="logout-link" onClick={logout}>Sign out</button></div>
       </aside>
-
       <section className="workspace">
         <header className="topbar">
-          <div><span className="eyebrow">CONFIGURATION</span><h1>School profile</h1></div>
-          <div className="topbar-right"><span className="secure-label">● Secure admin area</span><span className="avatar">SA</span></div>
+          <div><span className="eyebrow">{user.role.replace('_', ' ')}</span><h1>{activeMenu?.title || pageTitle(currentPath)}</h1></div>
+          <div className="topbar-right"><span className="secure-label">● Signed in securely</span><span className="avatar">{initials(user.fullName)}</span></div>
         </header>
-
         <div className="content">
-          <div className="page-intro">
-            <div><h2>School information</h2><p>Manage the official details used across your school bus operations.</p></div>
-            {school && <span className={`status-pill ${school.status.toLowerCase()}`}>{school.status}</span>}
-          </div>
-
-          {(error || notice) && <div className={`message ${error ? 'error' : 'success'}`}>{error || notice}</div>}
-
-          <section className="token-panel">
-            <div><strong>Admin access token</strong><p>Paste the access token issued by your School Admin login.</p></div>
-            <form onSubmit={saveToken} className="token-form">
-              <input aria-label="Access token" value={token} onChange={e => setToken(e.target.value)} placeholder="Paste JWT access token" type="password" />
-              <button type="submit" className="button secondary">Save token</button>
-            </form>
-          </section>
-
-          {loading ? <div className="loading">Loading school profile…</div> : (
-            <section className="panel">
-              <div className="panel-heading">
-                <div><span className="section-kicker">GENERAL DETAILS</span><h3>{school ? (editing ? 'Update school details' : school.name) : 'Create school profile'}</h3></div>
-                {school && !editing && <button className="button primary" onClick={() => setEditing(true)}>Edit details</button>}
-              </div>
-
-              {!school && !editing ? (
-                <div className="empty-state"><div className="empty-icon">⌂</div><h3>No school profile found</h3><p>Create your school's profile to start configuring the bus tracking system.</p><button className="button primary" onClick={() => setEditing(true)}>Create school profile</button></div>
-              ) : editing ? (
-                <form onSubmit={handleSubmit}>
-                  <div className="form-grid">
-                    {fields.map(field => <label className="field" key={field.key}><span>{field.label}{field.required && <b> *</b>}</span><input required={field.required} type={field.type || 'text'} value={form[field.key] || ''} onChange={e => updateField(field.key, e.target.value)} /></label>)}
-                  </div>
-                  <div className="form-actions"><button type="button" className="button secondary" onClick={() => { setEditing(false); if (school) { const { id: _id, status: _status, createdAt: _created, updatedAt: _updated, ...details } = school; setForm(details) } }}>Cancel</button><button className="button primary" type="submit" disabled={saving}>{saving ? 'Saving…' : school ? 'Save changes' : 'Create school'}</button></div>
-                </form>
-              ) : school && (
-                <>
-                  <div className="details-grid">
-                    <Detail label="School name" value={school.name} />
-                    <Detail label="School code" value={school.code} />
-                    <Detail label="Official email" value={school.email} />
-                    <Detail label="Phone number" value={school.phone} />
-                    <Detail label="Website" value={school.website} />
-                    <Detail label="Address" value={[school.addressLine1, school.addressLine2].filter(Boolean).join(', ')} />
-                    <Detail label="City" value={school.city} />
-                    <Detail label="State" value={school.state} />
-                    <Detail label="PIN code" value={school.pincode} />
-                    <Detail label="Country" value={school.country} />
-                  </div>
-                  <div className="form-actions status-actions"><span className="muted">School status: <strong>{school.status}</strong></span><button className="button secondary" onClick={changeStatus}>{school.status === 'ACTIVE' ? 'Deactivate school' : 'Activate school'}</button></div>
-                </>
-              )}
-            </section>
-          )}
-          <p className="footnote">School Admin can update school information and status. School deletion is intentionally not available here.</p>
+          {error && <div className="message error">{error}</div>}
+          {notice && <div className="message success">{notice}</div>}
+          {currentPath === '/school' ? <SchoolPage token={token} setError={setError} setNotice={setNotice} /> :
+            currentPath === '/drivers' ? <DriversPage token={token} setError={setError} setNotice={setNotice} /> :
+            currentPath === '/drivers/dashboard' ? <DriversDashboard token={token} /> :
+            <DashboardPage user={user} path={currentPath} />}
         </div>
       </section>
     </main>
   )
 }
 
-function Detail({ label, value }: { label: string; value: string | null | undefined }) {
-  return <div className="detail"><span>{label}</span><strong>{value || 'Not provided'}</strong></div>
+function LoginPage({ email, password, setEmail, setPassword, onSubmit, busy, error }: {
+  email: string; password: string; setEmail: (value: string) => void; setPassword: (value: string) => void
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void; busy: boolean; error: string
+}) {
+  return <main className="login-screen">
+    <section className="login-card">
+      <div className="login-brand"><span className="brand-mark">SR</span><div><strong>SchoolRoute</strong><small>SCHOOL BUS MANAGEMENT</small></div></div>
+      <div className="login-heading"><span className="section-kicker">WELCOME BACK</span><h1>Sign in to your workspace</h1><p>Use the account credentials provided by your school administrator.</p></div>
+      {error && <div className="message error">{error}</div>}
+      <form onSubmit={onSubmit} className="login-form">
+        <label className="field"><span>Email address</span><input type="email" autoComplete="username" required value={email} onChange={e => setEmail(e.target.value)} placeholder="you@school.com" /></label>
+        <label className="field"><span>Password</span><input type="password" autoComplete="current-password" required value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter your password" /></label>
+        <button className="button primary login-button" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
+      </form>
+      <p className="login-footnote">Your available menus and landing page are loaded securely from the server after sign in.</p>
+    </section>
+  </main>
 }
+
+function MenuItem({ menu, currentPath, navigate }: { menu: Menu; currentPath: string; navigate: (path: string) => void }) {
+  const hasChildren = menu.children?.length > 0
+  const selected = menu.path === currentPath || menu.children?.some(child => child.path === currentPath)
+  return <div className="menu-group">
+    <button className={`nav-item ${selected ? 'active' : ''} ${hasChildren ? 'parent-menu' : ''}`} onClick={() => menu.path && navigate(menu.path)}>
+      <span className="menu-icon">{iconFor(menu.icon)}</span>{menu.title}{hasChildren && <span className="menu-chevron">⌄</span>}
+    </button>
+    {hasChildren && <div className="submenu">{menu.children.map(child => <button key={child.id} className={`submenu-item ${currentPath === child.path ? 'selected' : ''}`} onClick={() => child.path && navigate(child.path)}>{child.title}</button>)}</div>}
+  </div>
+}
+
+function DashboardPage({ user, path }: { user: LoginUser; path: string }) {
+  return <><div className="page-intro"><div><h2>{path === '/dashboard' ? 'School overview' : pageTitle(path)}</h2><p>Welcome, {user.fullName}. Your role-specific workspace is ready.</p></div><span className="status-pill active">CONNECTED</span></div>
+    <div className="stats-grid"><div className="stat-card"><span>YOUR ROLE</span><strong>{user.role.replace('_', ' ')}</strong><small>Access managed by SchoolRoute</small></div><div className="stat-card"><span>ACCOUNT STATUS</span><strong>Active</strong><small>You are signed in</small></div><div className="stat-card"><span>WORKSPACE</span><strong>SchoolRoute</strong><small>School bus operations</small></div></div>
+    <section className="panel welcome-panel"><span className="section-kicker">GET STARTED</span><h3>Welcome to your dashboard</h3><p>Use the navigation menu to open the modules available to your account. The menu is controlled by your role and delivered by the backend.</p></section>
+  </>
+}
+
+function DriversDashboard({ token }: { token: string }) {
+  const [drivers, setDrivers] = useState<Driver[]>([])
+  useEffect(() => { api<Driver[]>('/user', token).then(data => setDrivers(data.filter(user => user.role === 'DRIVER'))).catch(() => setDrivers([])) }, [token])
+  const active = drivers.filter(driver => driver.enabled).length
+  return <><div className="page-intro"><div><h2>Drivers overview</h2><p>Current driver accounts registered for this school.</p></div><span className="status-pill active">LIVE DATA</span></div>
+    <div className="stats-grid"><div className="stat-card"><span>TOTAL DRIVERS</span><strong>{drivers.length}</strong><small>Registered driver accounts</small></div><div className="stat-card"><span>ACTIVE DRIVERS</span><strong>{active}</strong><small>Enabled accounts</small></div><div className="stat-card"><span>INACTIVE DRIVERS</span><strong>{drivers.length - active}</strong><small>Disabled accounts</small></div></div>
+    <section className="panel"><div className="panel-heading"><div><span className="section-kicker">SCHOOL DRIVERS</span><h3>Driver account summary</h3></div></div><div className="table-wrap"><table><thead><tr><th>Driver</th><th>Email</th><th>Status</th></tr></thead><tbody>{drivers.slice(0, 8).map(driver => <tr key={driver.id}><td>{driver.fullName}</td><td>{driver.email}</td><td><span className={`status-pill ${driver.enabled ? 'active' : 'inactive'}`}>{driver.enabled ? 'ACTIVE' : 'INACTIVE'}</span></td></tr>)}{drivers.length === 0 && <tr><td colSpan={3} className="empty-cell">No driver accounts have been added yet.</td></tr>}</tbody></table></div></section>
+  </>
+}
+
+function DriversPage({ token, setError, setNotice }: { token: string; setError: (value: string) => void; setNotice: (value: string) => void }) {
+  const [drivers, setDrivers] = useState<Driver[]>([])
+  const [form, setForm] = useState<DriverForm>(emptyDriver)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [showForm, setShowForm] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const load = useCallback(async () => { const data = await api<Driver[]>('/user', token); setDrivers(data.filter(item => item.role === 'DRIVER')) }, [token])
+  useEffect(() => { void load().catch(err => setError(err.message)) }, [load, setError])
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); setBusy(true); setError(''); setNotice('')
+    try {
+      if (editingId) {
+        await api<Driver>(`/user/${editingId}`, token, { method: 'PUT', body: JSON.stringify({ fullName: form.fullName, email: form.email }) })
+        setNotice('Driver details updated.')
+      } else {
+        await api<Driver>('/user', token, { method: 'POST', body: JSON.stringify({ ...form, role: 'DRIVER' }) })
+        setNotice('Driver account created.')
+      }
+      setForm(emptyDriver); setEditingId(null); setShowForm(false); await load()
+    } catch (err) { setError(err instanceof Error ? err.message : 'Unable to save driver.') }
+    finally { setBusy(false) }
+  }
+  function edit(driver: Driver) { setEditingId(driver.id); setForm({ fullName: driver.fullName, email: driver.email, password: '' }); setShowForm(true) }
+  async function deactivate(driver: Driver) {
+    if (!window.confirm(`Deactivate driver account for ${driver.fullName}?`)) return
+    try { await api<Driver>(`/user/${driver.id}/status`, token, { method: 'PATCH', body: JSON.stringify({ enabled: false }) }); setNotice('Driver account deactivated.'); await load() }
+    catch (err) { setError(err instanceof Error ? err.message : 'Unable to deactivate driver.') }
+  }
+  return <>
+    <div className="page-intro"><div><h2>All drivers</h2><p>Create, update and deactivate driver accounts for your school.</p></div><button className="button primary" onClick={() => { setEditingId(null); setForm(emptyDriver); setShowForm(true) }}>+ Add driver</button></div>
+    {showForm && <section className="panel form-panel"><div className="panel-heading"><div><span className="section-kicker">DRIVER ACCOUNT</span><h3>{editingId ? 'Update driver' : 'Add new driver'}</h3></div></div><form onSubmit={submit}><div className="form-grid"><label className="field"><span>Full name *</span><input required value={form.fullName} onChange={e => setForm({ ...form, fullName: e.target.value })} /></label><label className="field"><span>Email *</span><input required type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></label>{!editingId && <label className="field"><span>Temporary password *</span><input required minLength={8} type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} /></label>}</div><div className="form-actions"><button type="button" className="button secondary" onClick={() => setShowForm(false)}>Cancel</button><button className="button primary" disabled={busy}>{busy ? 'Saving…' : 'Save driver'}</button></div></form></section>}
+    <section className="panel"><div className="panel-heading"><div><span className="section-kicker">SCHOOL DIRECTORY</span><h3>Driver accounts <small className="count-label">{drivers.length}</small></h3></div></div><div className="table-wrap"><table><thead><tr><th>Driver name</th><th>Email</th><th>Status</th><th>Actions</th></tr></thead><tbody>{drivers.map(driver => <tr key={driver.id}><td><strong>{driver.fullName}</strong></td><td>{driver.email}</td><td><span className={`status-pill ${driver.enabled ? 'active' : 'inactive'}`}>{driver.enabled ? 'ACTIVE' : 'INACTIVE'}</span></td><td className="actions-cell"><button className="table-action" onClick={() => edit(driver)}>Edit</button>{driver.enabled && <button className="table-action danger" onClick={() => void deactivate(driver)}>Deactivate</button>}</td></tr>)}{drivers.length === 0 && <tr><td colSpan={4} className="empty-cell">No drivers found. Add your first driver.</td></tr>}</tbody></table></div></section>
+    <p className="footnote">Deactivate is a soft delete: it disables login while preserving historical trip and audit records.</p>
+  </>
+}
+
+function SchoolPage({ token, setError, setNotice }: { token: string; setError: (value: string) => void; setNotice: (value: string) => void }) {
+  const [school, setSchool] = useState<School | null>(null)
+  const [form, setForm] = useState<SchoolForm>(emptySchool)
+  const [editing, setEditing] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const load = useCallback(async () => {
+    setLoading(true)
+    try { const rows = await api<School[]>('/school', token); const current = rows[0] || null; setSchool(current); if (current) { const { id: _id, status: _status, createdAt: _created, updatedAt: _updated, ...details } = current; setForm(details) } else setForm(emptySchool) }
+    catch (err) { setError(err instanceof Error ? err.message : 'Unable to load school details.') }
+    finally { setLoading(false) }
+  }, [token, setError])
+  useEffect(() => { void load() }, [load])
+  const fields: { key: keyof SchoolForm; label: string; required?: boolean; type?: string }[] = [
+    { key: 'name', label: 'School name', required: true }, { key: 'code', label: 'School code', required: true },
+    { key: 'email', label: 'Official email', type: 'email' }, { key: 'phone', label: 'Phone number' },
+    { key: 'website', label: 'Website' }, { key: 'addressLine1', label: 'Address line 1', required: true },
+    { key: 'addressLine2', label: 'Address line 2' }, { key: 'city', label: 'City', required: true },
+    { key: 'state', label: 'State', required: true }, { key: 'pincode', label: 'PIN code', required: true },
+    { key: 'country', label: 'Country', required: true },
+  ]
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); setSaving(true); setError(''); setNotice('')
+    try { const saved = await api<School>(school ? `/school/${school.id}` : '/school', token, { method: school ? 'PUT' : 'POST', body: JSON.stringify(form) }); setSchool(saved); setEditing(false); setNotice('School details saved successfully.'); await load() }
+    catch (err) { setError(err instanceof Error ? err.message : 'Unable to save school details.') }
+    finally { setSaving(false) }
+  }
+  return <><div className="page-intro"><div><h2>School information</h2><p>Manage the official details used across your school bus operations.</p></div>{school && <span className={`status-pill ${school.status.toLowerCase()}`}>{school.status}</span>}</div>
+    {loading ? <div className="loading">Loading school profile…</div> : <section className="panel"><div className="panel-heading"><div><span className="section-kicker">SCHOOL CONFIGURATION</span><h3>{school ? (editing ? 'Update school details' : school.name) : 'Create school profile'}</h3></div>{school && !editing && <button className="button primary" onClick={() => setEditing(true)}>Edit details</button>}</div>
+      {!school && !editing ? <div className="empty-state"><h3>No school profile found</h3><p>Create your school's profile to start configuring bus operations.</p><button className="button primary" onClick={() => setEditing(true)}>Create school profile</button></div> : editing ? <form onSubmit={submit}><div className="form-grid">{fields.map(field => <label className="field" key={field.key}><span>{field.label}{field.required && ' *'}</span><input required={field.required} type={field.type || 'text'} value={form[field.key] || ''} onChange={e => setForm({ ...form, [field.key]: e.target.value })} /></label>)}</div><div className="form-actions"><button type="button" className="button secondary" onClick={() => setEditing(false)}>Cancel</button><button className="button primary" disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</button></div></form> : school && <><div className="details-grid">{fields.map(field => <Detail key={field.key} label={field.label} value={school[field.key]} />)}</div><div className="form-actions"><button className="button secondary" onClick={async () => { const status = school.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'; try { await api(`/school/${school.id}/status`, token, { method: 'PATCH', body: JSON.stringify({ status }) }); setNotice(`School marked ${status.toLowerCase()}.`); await load() } catch (err) { setError(err instanceof Error ? err.message : 'Unable to update status.') } }}>{school.status === 'ACTIVE' ? 'Deactivate school' : 'Activate school'}</button></div></>}
+    </section>}
+    <p className="footnote">This installation supports one school. School deletion is intentionally not available.</p>
+  </>
+}
+
+function Detail({ label, value }: { label: string; value: string | null | undefined }) { return <div className="detail"><span>{label}</span><strong>{value || 'Not provided'}</strong></div> }
+function flattenMenus(items: Menu[]): Menu[] { return items.flatMap(item => [item, ...flattenMenus(item.children || [])]) }
+function menuHasPath(path: string) { return (menu: Menu) => menu.path === path || menu.children?.some(child => child.path === path) }
+function pageTitle(path: string) { return path.split('/').filter(Boolean).map(part => part.replace(/-/g, ' ').replace(/^\w/, char => char.toUpperCase())).join(' / ') || 'Dashboard' }
+function initials(name: string) { return name.split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase() }
+function iconFor(icon: string | null) { const icons: Record<string, string> = { 'layout-dashboard': '▦', school: '⌂', 'steering-wheel': '◉', users: '♙', route: '↗', 'map-pinned': '⌖', bell: '♧' }; return icons[icon || ''] || '•' }
 
 export default App
