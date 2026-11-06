@@ -23,7 +23,7 @@ public class SchoolServiceImpl implements SchoolService {
     @Override
     public School createSchool(School school) {
         if (!schoolPersistencePort.findAll().isEmpty()) {
-            throw new IllegalStateException("A school is already configured for this single-school installation.");
+            throw new IllegalArgumentException("A school is already configured for this single-school installation.");
         }
         if (schoolPersistencePort.existsByCode(school.code())) {
             throw new IllegalArgumentException("School code already exists.");
