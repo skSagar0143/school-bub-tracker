@@ -31,3 +31,11 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Local credentials and cryptographic material - NEVER commit these.
+secrets/
+*.pem
+*.key
+.env
+.env.*
+!.env.example
