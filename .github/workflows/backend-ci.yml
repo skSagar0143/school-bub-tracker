@@ -1,20 +1,39 @@
-name: Backend CI
+name: Project CI
 
 on:
   push:
     branches: [ main ]
     paths:
       - "backend/bus-tracker/**"
+      - "frontend/web-app/**"
       - ".github/workflows/backend-ci.yml"
   pull_request:
     paths:
       - "backend/bus-tracker/**"
+      - "frontend/web-app/**"
       - ".github/workflows/backend-ci.yml"
   workflow_dispatch:
 
 jobs:
-  build-and-test:
+  backend-build-and-test:
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: bus_tracker
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      DB_URL: jdbc:mysql://127.0.0.1:3306/bus_tracker?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      DB_USERNAME: root
+      DB_PASSWORD: root
     defaults:
       run:
         working-directory: backend/bus-tracker
@@ -31,3 +50,24 @@ jobs:
         run: chmod +x mvnw
       - name: Compile and test
         run: ./mvnw --batch-mode --no-transfer-progress clean verify
+
+  frontend-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend/web-app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/web-app/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Type-check and build
+        run: npm run build
+      - name: Lint
+        run: npm run lint
