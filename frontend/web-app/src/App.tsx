@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { ArrowRight, BellRing, BusFront, CheckCircle2, Eye, EyeOff, LockKeyhole, LogOut, Mail, MapPinned, Navigation, ShieldCheck, UserRound, Users } from 'lucide-react'
 import { getCurrentUser, login, logout, register } from './services/auth'
 import type { AuthUser } from './services/auth'
+import Dashboard from './components/Dashboard'
 import './App.css'
 
 type Mode = 'login' | 'register'
@@ -67,6 +68,8 @@ function App() {
     setNotice('You have been signed out.')
     setLoading(false)
   }
+
+  if (user) return <Dashboard user={user} onLogout={handleLogout} loggingOut={loading} />
 
   if (checkingSession) return <main className="boot-screen"><div className="boot-mark"><BusFront size={26} /></div><span>Checking your secure session…</span></main>
 
