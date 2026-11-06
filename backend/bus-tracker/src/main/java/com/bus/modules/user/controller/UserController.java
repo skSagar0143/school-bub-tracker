@@ -53,6 +53,13 @@ public class UserController {
         return UserResponse.from(userService.updateUser(id, request));
     }
 
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Delete a user account (soft delete; disables sign-in)")
+    public void delete(@PathVariable UUID id) {
+        userService.deleteUser(id);
+    }
+
     @PatchMapping("/{id}/status")
     @Operation(summary = "Enable or disable a user account")
     public UserResponse updateStatus(@PathVariable UUID id, @Valid @RequestBody UserStatusRequest request) {
