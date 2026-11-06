@@ -1,6 +1,8 @@
-import { FormEvent, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
+import type { FormEvent } from 'react'
 import { ArrowRight, BellRing, BusFront, CheckCircle2, Eye, EyeOff, LockKeyhole, LogOut, Mail, MapPinned, Navigation, ShieldCheck, UserRound, Users } from 'lucide-react'
-import { AuthUser, getCurrentUser, login, logout, register } from './services/auth'
+import { getCurrentUser, login, logout, register } from './services/auth'
+import type { AuthUser } from './services/auth'
 import './App.css'
 
 type Mode = 'login' | 'register'
