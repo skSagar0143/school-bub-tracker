@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
 import {
-  Activity, ArrowDownRight, ArrowUpRight, Bell, BusFront, CalendarDays,
+  Activity, ArrowUpRight, Bell, BusFront, CalendarDays,
   CheckCircle2, ChevronDown, CircleHelp, Clock3, Command, Compass,
-  LayoutDashboard, LogOut, MapPin, Menu, MessageSquare, Navigation,
+  LayoutDashboard, LogOut, MapPin, Menu, Navigation,
   Search, Settings, ShieldCheck, UserRound, Users, X, Route, WalletCards,
 } from 'lucide-react'
 import type { AuthUser } from '../services/auth'
