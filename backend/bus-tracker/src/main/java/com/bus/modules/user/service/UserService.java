@@ -61,6 +61,15 @@ public class UserService {
         return userRepository.save(user);
     }
 
+    public void deleteUser(UUID id) {
+        User user = getUser(id);
+        if (user.getRole() == UserRole.SCHOOL_ADMIN) {
+            throw new IllegalArgumentException("School Admin account cannot be deleted.");
+        }
+        user.setEnabled(false);
+        userRepository.save(user);
+    }
+
     public User updateStatus(UUID id, boolean enabled) {
         User user = getUser(id);
         if (user.getRole() == UserRole.SCHOOL_ADMIN) {
