@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { ArrowRight, BellRing, BusFront, CheckCircle2, Eye, EyeOff, LockKeyhole, LogOut, Mail, MapPinned, Navigation, ShieldCheck, UserRound, Users } from 'lucide-react'
 import { getCurrentUser, login, logout, register } from './services/auth'
 import type { AuthUser } from './services/auth'
+import Dashboard from './components/Dashboard'
 import './App.css'
 
 type Mode = 'login' | 'register'
@@ -68,6 +69,8 @@ function App() {
     setLoading(false)
   }
 
+  if (user) return <Dashboard user={user} onLogout={handleLogout} loggingOut={loading} />
+
   if (checkingSession) return <main className="boot-screen"><div className="boot-mark"><BusFront size={26} /></div><span>Checking your secure session…</span></main>
 
   return (
@@ -94,18 +97,7 @@ function App() {
       <section className="form-panel">
         <div className="mobile-brand"><div className="brand-icon"><BusFront size={22} /></div><b>School<span>Route</span></b></div>
         <div className="form-wrap">
-          {user ? (
-            <div className="success-view">
-              <div className="success-icon"><CheckCircle2 size={32} /></div>
-              <div className="form-kicker">AUTHENTICATION COMPLETE</div>
-              <h2>You're all set,<br /><span>{user.fullName.split(' ')[0]}.</span></h2>
-              <p className="form-intro">Your account is securely connected. The parent workspace will become available as we build the school, student and trip modules.</p>
-              <div className="account-card"><div className="account-avatar">{user.fullName.slice(0, 1).toUpperCase()}</div><div className="account-details"><strong>{user.fullName}</strong><span>{user.email}</span></div><span className="role-pill">{user.role}</span></div>
-              <div className="session-note"><ShieldCheck size={16} /> RSA-secured session active</div>
-              <button className="primary-button" onClick={handleLogout} disabled={loading}>{loading ? 'Signing out…' : 'Sign out'} <LogOut size={17} /></button>
-              <p className="fine-print">Your refresh session is stored as a hash on the server.</p>
-            </div>
-          ) : (
+
             <>
               <div className="form-kicker">{mode === 'login' ? 'WELCOME BACK' : 'GET STARTED'}</div>
               <h2>{mode === 'login' ? <>Good to see<br /><span>you again.</span></> : <>Join the<br /><span>parent community.</span></>}</h2>
@@ -126,7 +118,7 @@ function App() {
               </form>
               <div className="secure-caption"><ShieldCheck size={15} /><span>Protected with RSA-256 token signing and BCrypt password hashing.</span></div>
             </>
-          )}
+
         </div>
         <div className="form-bottom"><span>NEED HELP? <a href="mailto:support@schoolroute.local">CONTACT SUPPORT</a></span><span>PRIVACY FIRST · ALWAYS</span></div>
       </section>
