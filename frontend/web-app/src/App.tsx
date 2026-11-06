@@ -55,12 +55,6 @@ function App() {
     setNotice('')
   }, [])
 
-  const loadMenus = useCallback(async (accessToken: string, redirect = false) => {
-    const result = await api<MenuResponse>('/menu/me', accessToken)
-    setMenus(result.menus || [])
-    if (redirect || !result.menus.some(menuHasPath(currentPath))) navigate(result.defaultPath || '/')
-  }, [currentPath, navigate])
-
   useEffect(() => {
     const onPopState = () => setCurrentPath(window.location.pathname)
     window.addEventListener('popstate', onPopState)
@@ -127,6 +121,7 @@ function App() {
           <div className="topbar-right"><span className="secure-label">● Signed in securely</span><span className="avatar">{initials(user.fullName)}</span></div>
         </header>
         <div className="content">
+          {loading && <div className="loading">Loading your workspace…</div>}
           {error && <div className="message error">{error}</div>}
           {notice && <div className="message success">{notice}</div>}
           {currentPath === '/school' ? <SchoolPage token={token} setError={setError} setNotice={setNotice} /> :
@@ -259,7 +254,6 @@ function SchoolPage({ token, setError, setNotice }: { token: string; setError: (
 
 function Detail({ label, value }: { label: string; value: string | null | undefined }) { return <div className="detail"><span>{label}</span><strong>{value || 'Not provided'}</strong></div> }
 function flattenMenus(items: Menu[]): Menu[] { return items.flatMap(item => [item, ...flattenMenus(item.children || [])]) }
-function menuHasPath(path: string) { return (menu: Menu) => menu.path === path || menu.children?.some(child => child.path === path) }
 function pageTitle(path: string) { return path.split('/').filter(Boolean).map(part => part.replace(/-/g, ' ').replace(/^\w/, char => char.toUpperCase())).join(' / ') || 'Dashboard' }
 function initials(name: string) { return name.split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase() }
 function iconFor(icon: string | null) { const icons: Record<string, string> = { 'layout-dashboard': '▦', school: '⌂', 'steering-wheel': '◉', users: '♙', route: '↗', 'map-pinned': '⌖', bell: '♧' }; return icons[icon || ''] || '•' }
