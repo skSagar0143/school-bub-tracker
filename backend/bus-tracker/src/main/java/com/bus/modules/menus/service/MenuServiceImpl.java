@@ -41,6 +41,7 @@ public class MenuServiceImpl implements MenuService {
 		case DRIVER -> MenusFor.DRIVERS;
 		case STUDENT -> MenusFor.STUDENTS;
 		case PARENT -> MenusFor.PARENTS;
+		default -> throw new IllegalArgumentException("Unexpected value: " + role);
 		};
 	}
 
