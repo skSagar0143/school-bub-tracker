@@ -1,12 +1,10 @@
-package com.bus.modules.school.api.dto.request;
-
-import com.bus.modules.school.domain.School;
+package com.bus.modules.school.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-public record SchoolCreateRequest(
+public record SchoolRequest(
         @NotBlank @Size(max = 150) String name,
         @NotBlank @Size(max = 30) String code,
         @Email @Size(max = 150) String email,
@@ -19,8 +17,4 @@ public record SchoolCreateRequest(
         @NotBlank @Size(max = 10) String pincode,
         @NotBlank @Size(max = 100) String country
 ) {
-    public School toDomain() {
-        return new School(null, name, code, email, phone, website, addressLine1,
-                addressLine2, city, state, pincode, country, null, null, null);
-    }
 }

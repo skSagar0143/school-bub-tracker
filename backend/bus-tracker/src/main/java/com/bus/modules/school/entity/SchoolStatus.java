@@ -1,4 +1,4 @@
-package com.bus.modules.school.domain;
+package com.bus.modules.school.entity;
 
 public enum SchoolStatus {
     ACTIVE,

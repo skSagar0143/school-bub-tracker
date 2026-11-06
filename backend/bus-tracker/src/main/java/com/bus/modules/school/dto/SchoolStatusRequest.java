@@ -1,7 +1,6 @@
-package com.bus.modules.school.api.dto.request;
+package com.bus.modules.school.dto;
 
-import com.bus.modules.school.domain.SchoolStatus;
-
+import com.bus.modules.school.entity.SchoolStatus;
 import jakarta.validation.constraints.NotNull;
 
 public record SchoolStatusRequest(@NotNull SchoolStatus status) {

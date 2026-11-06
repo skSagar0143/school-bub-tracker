@@ -1,8 +1,6 @@
-package com.bus.modules.school.infrastructure.persistence.entity;
+package com.bus.modules.school.entity;
 
 import java.time.LocalDateTime;
-
-import com.bus.modules.school.domain.SchoolStatus;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -23,7 +21,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class SchoolJpaEntity {
+public class School {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -73,14 +71,14 @@ public class SchoolJpaEntity {
     private LocalDateTime updatedAt;
 
     @PrePersist
-    protected void onCreate() {
+    void onCreate() {
         LocalDateTime now = LocalDateTime.now();
         createdAt = now;
         updatedAt = now;
     }
 
     @PreUpdate
-    protected void onUpdate() {
+    void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
 }

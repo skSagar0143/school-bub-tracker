@@ -47,11 +47,13 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(
-                                "/api/v1/auth/**",
+                                "/auth/**",
                                 "/actuator/health",
                                 "/error",
                                 "/swagger-ui/**",
-                                "/v3/api-docs/**")
+                                "/swagger-ui.html",
+                                "/v3/api-docs/**",
+                                "/v3/api-docs.yaml")
                         .permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(exception -> exception
