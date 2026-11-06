@@ -16,16 +16,13 @@ function App() {
   const [showPassword, setShowPassword] = useState(false)
   const [user, setUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(false)
-  const [checkingSession, setCheckingSession] = useState(true)
+  const [checkingSession, setCheckingSession] = useState(() => Boolean(sessionStorage.getItem('bus_access_token')))
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
 
   useEffect(() => {
     let active = true
-    if (!sessionStorage.getItem('bus_access_token')) {
-      setCheckingSession(false)
-      return
-    }
+    if (!sessionStorage.getItem('bus_access_token')) return
     getCurrentUser().then((currentUser) => { if (active) setUser(currentUser) })
       .catch(() => { if (active) setUser(null) })
       .finally(() => { if (active) setCheckingSession(false) })
