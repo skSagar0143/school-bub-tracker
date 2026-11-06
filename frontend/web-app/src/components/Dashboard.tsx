@@ -6,6 +6,7 @@ import {
   Search, Settings, ShieldCheck, UserRound, Users, X, Route
 } from 'lucide-react'
 import type { AuthUser } from '../services/auth'
+import SchoolManagement from './SchoolManagement'
 import './Dashboard.css'
 
 type Props = { user: AuthUser; onLogout: () => void; loggingOut: boolean }
@@ -77,7 +78,7 @@ function Dashboard({ user, onLogout, loggingOut }: Props) {
         <div className="nav-caption">MENU</div>
         <nav className="dash-nav" aria-label="Main navigation">
           {navItems.map(({ label, icon: Icon }) => (
-            <button key={label} className={activeNav === label ? 'active' : ''} onClick={() => { setActiveNav(label); setSidebarOpen(false); if (label !== 'Overview') showComingSoon(label) }}>
+            <button key={label} className={activeNav === label ? 'active' : ''} onClick={() => { setActiveNav(label); setSidebarOpen(false); if (label !== 'Overview' && !(role === 'SCHOOL_ADMIN' && label === 'Schools')) showComingSoon(label) }}>
               <Icon size={18} /><span>{label}</span>{label === 'Notifications' && <i className="nav-count">2</i>}
             </button>
           ))}
@@ -123,7 +124,9 @@ function Dashboard({ user, onLogout, loggingOut }: Props) {
 
           <div className="preview-banner"><div className="preview-mark"><Activity size={17} /></div><div><strong>Workspace preview</strong><span>Your secure account is connected. Live student, bus and trip data will appear here as the remaining modules are integrated.</span></div><span className="preview-pill">SETUP IN PROGRESS</span></div>
 
-          {isParent ? (
+          {role === 'SCHOOL_ADMIN' && activeNav === 'Schools' ? (
+            <SchoolManagement />
+          ) : isParent ? (
             <>
               <div className="section-heading"><div><h2>Family overview</h2><p>A clear view of the journeys that matter.</p></div><button className="outline-action" onClick={() => showComingSoon('Link a child')}><Users size={16} /> Link a child</button></div>
               <div className="parent-grid">
