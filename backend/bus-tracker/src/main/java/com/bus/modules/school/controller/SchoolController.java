@@ -12,6 +12,7 @@ import com.bus.modules.school.dto.SchoolResponse;
 import com.bus.modules.school.service.SchoolService;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('SCHOOL_ADMIN')")
 @Tag(name = "School", description = "School profile management")
+@SecurityRequirement(name = "bearerAuth")
 public class SchoolController {
 
     private final SchoolService schoolService;
