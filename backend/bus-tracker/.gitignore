@@ -39,3 +39,12 @@ secrets/
 .env
 .env.*
 !.env.example
+# RSA JWT keys - never commit private keys
+secrets/
+*.pem
+*.key
+
+# Environment secrets
+.env
+.env.*
+!.env.example
