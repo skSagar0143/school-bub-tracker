@@ -43,7 +43,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (StringUtils.hasText(token)) {
                 try {
-                    Claims claims = jwtService.parseAndValidate(token);
+                    Claims claims = jwtService.parseAndValidateAccessToken(token);
                     String subject = claims.getSubject();
 
                     if (StringUtils.hasText(subject)) {
@@ -57,7 +57,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         SecurityContextHolder.getContext().setAuthentication(authentication);
                     }
                 } catch (JwtException | IllegalArgumentException exception) {
-                    // Invalid/expired tokens remain unauthenticated; protected routes return 401.
                     SecurityContextHolder.clearContext();
                 }
             }
