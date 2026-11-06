@@ -3,7 +3,7 @@ import {
   Activity, ArrowUpRight, Bell, BusFront, CalendarDays,
   CheckCircle2, ChevronDown, CircleHelp, Clock3, Command, Compass,
   LayoutDashboard, LogOut, MapPin, Menu, Navigation,
-  Search, Settings, ShieldCheck, UserRound, Users, X, Route, WalletCards,
+  Search, Settings, ShieldCheck, UserRound, Users, X, Route
 } from 'lucide-react'
 import type { AuthUser } from '../services/auth'
 import './Dashboard.css'
