@@ -471,7 +471,7 @@ function StudentsPage({ token, setError, setNotice }: { token: string; setError:
   }
 
   return <>
-    <div className="page-intro">
+    {!showForm && <div className="page-intro">
       <div><h2>Student management</h2><p>Add, update and manage students. Select students to perform bulk actions.</p></div>
       <div className="page-header-actions">
         <button className="button primary" onClick={openCreateForm}><Users size={15} /> Add Students</button>
@@ -479,10 +479,11 @@ function StudentsPage({ token, setError, setNotice }: { token: string; setError:
         <button className="button danger" disabled={selectedIds.length === 0} onClick={() => void deleteSelectedStudents()}><Users size={15} /> Delete Students ({selectedIds.length})</button>
         <button className="button secondary" onClick={() => void load()} disabled={loading}><RefreshCw size={14} /> Refresh</button>
       </div>
-    </div>
+    </div>}
+    {showForm && <div className="record-page-header"><button type="button" className="breadcrumb-back" onClick={() => { setShowForm(false); setEditingId(null) }}>Students</button><span>/</span><strong>{editingId ? 'Update student' : 'Add student'}</strong></div>}
 
     {showForm && <section className="panel form-panel">
-      <div className="panel-heading"><div><span className="section-kicker">STUDENT RECORD</span><h3>{editingId ? 'Update student' : 'Add new student'}</h3></div></div>
+
       <form onSubmit={submit}>
         <div className="form-grid">
           <label className="field"><span>School ID *</span><NumberInput type="number" min="1" required value={form.schoolId || ''} onChange={e => setForm({ ...form, schoolId: Number(e.target.value) })} /></label>
@@ -673,16 +674,17 @@ function BusesPage({ token, setError, setNotice }: { token: string; setError: (v
   }
 
   return <>
-    <div className="page-intro">
+    {!showForm && <div className="page-intro">
       <div><h2>Bus management</h2><p>Add, update and manage your school fleet and vehicle documents.</p></div>
       <div className="page-header-actions">
         <button className="button primary" onClick={openCreateForm}><BusFront size={15} /> Add Bus</button>
         <button className="button secondary" onClick={() => void load()} disabled={loading}><RefreshCw size={14} /> Refresh</button>
       </div>
-    </div>
+    </div>}
+    {showForm && <div className="record-page-header"><button type="button" className="breadcrumb-back" onClick={() => { setShowForm(false); setEditingId(null) }}>Buses</button><span>/</span><strong>{editingId ? 'Update bus' : 'Add bus'}</strong></div>}
 
     {showForm && <section className="panel form-panel">
-      <div className="panel-heading"><div><span className="section-kicker">FLEET RECORD</span><h3>{editingId ? 'Update bus' : 'Add new bus'}</h3></div></div>
+
       <form onSubmit={submit}>
         <div className="form-grid">
           <label className="field"><span>School *</span>
