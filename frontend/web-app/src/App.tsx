@@ -1284,7 +1284,7 @@ function RoutesPage({ token, setError, setNotice }: { token: string; setError: (
 
 function withStudentMenu(items: Menu[], role?: UserRole): Menu[] {
   if (role !== 'SCHOOL_ADMIN') return items
-  return items.map(menu => {
+  const normalized = items.map(menu => {
     const name = menu.name.trim().toLowerCase()
     if (name === 'students') return { ...menu, path: '/students', subMenus: [] }
     if (name === 'drivers' || name === 'driver') return { ...menu, path: '/drivers', subMenus: [] }
@@ -1293,6 +1293,23 @@ function withStudentMenu(items: Menu[], role?: UserRole): Menu[] {
     if (name === 'route stops' || name === 'route stop' || name === 'routestops') return { ...menu, path: '/route-stops', subMenus: [] }
     return menu
   })
+  // Keep Route Stops visible for school admins even when it has not yet been
+  // configured in the database menu table.
+  const hasRouteStops = flattenMenus(normalized).some(menu =>
+    menu.path === '/route-stops' || ['route stops', 'route stop', 'routestops'].includes(menu.name.trim().toLowerCase())
+  )
+  if (!hasRouteStops) {
+    const routeMenu = normalized.find(menu => ['routes', 'route'].includes(menu.name.trim().toLowerCase()))
+    const nextId = Math.max(0, ...flattenMenus(normalized).map(menu => Number(menu.id) || 0)) + 1
+    const routeStopsMenu = { id: nextId, name: 'Route Stops', path: '/route-stops', icon: 'map-pinned', subMenus: [] } as Menu
+    if (routeMenu) {
+      const routeIndex = normalized.indexOf(routeMenu)
+      normalized.splice(routeIndex + 1, 0, routeStopsMenu)
+    } else {
+      normalized.push(routeStopsMenu)
+    }
+  }
+  return normalized
 }
 function flattenMenus(items: Menu[]): Menu[] { return items.flatMap(item => [item, ...flattenMenus(item.subMenus || [])]) }
 function pageTitle(path: string) { return path.split('/').filter(Boolean).map(part => part.replace(/-/g, ' ').replace(/^\w/, char => char.toUpperCase())).join(' / ') || 'Dashboard' }
