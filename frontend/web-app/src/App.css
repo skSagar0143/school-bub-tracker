@@ -343,3 +343,9 @@ html[data-theme="dark"] .student-subtext{color:#91a4c4}
 .page-header-actions .button.danger{background:#c83f55;color:#fff;border:1px solid #c83f55}
 .page-header-actions .button.danger:hover:not(:disabled){background:#ad3045}
 .page-header-actions .button:disabled{opacity:.48;cursor:not-allowed}
+
+
+/* Bus management page */
+html[data-theme="dark"] .student-search{background:rgba(8,20,43,.75);border-color:rgba(135,165,215,.25);color:#e8efff}
+html[data-theme="dark"] .student-search::placeholder{color:#91a4c4}
+.bus-registration{font-weight:700;letter-spacing:.35px}
