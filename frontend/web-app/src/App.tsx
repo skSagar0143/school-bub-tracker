@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Activity, ArrowUpRight, Bell, BusFront, Building2, CalendarDays, ChevronRight, Clock3, GraduationCap, MapPinned, Monitor, Moon, Plus, RefreshCw, Route, ShieldCheck, Sun, Users, UserRound } from 'lucide-react'
+import { Activity, ArrowUpRight, Bell, BusFront, Building2, CalendarDays, ChevronRight, Clock3, GraduationCap, MapPinned, Monitor, Moon, RefreshCw, Route, ShieldCheck, Sun, Users, UserRound } from 'lucide-react'
 import './App.css'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/sm'
