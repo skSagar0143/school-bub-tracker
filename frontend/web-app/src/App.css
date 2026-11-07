@@ -55,3 +55,18 @@
   .login-heading h1{font-size:22px}
   .table-wrap{margin:0 -4px;width:calc(100% + 8px)}
 }
+
+
+/* Keep the complete navigation readable while the mobile drawer is open */
+@media(max-width:760px){
+  .sidebar .brand>span:last-child{display:block;font-size:17px}
+  .sidebar .nav-caption{display:block;font-size:10px}
+  .sidebar .nav-item,.sidebar .nav-item:not(.active){display:flex;font-size:13px;justify-content:flex-start;padding:12px 13px}
+  .sidebar .nav-item .menu-icon{font-size:17px;margin-right:0}
+  .sidebar .nav-item .menu-chevron{display:inline;margin-left:auto}
+  .sidebar .submenu{margin:3px 0 8px 31px;padding-left:13px;border-left:1px solid #3a506b}
+  .sidebar .submenu-item{font-size:12px;padding:9px 10px}
+  .sidebar .sidebar-note,.sidebar .sidebar-footer{display:block}
+  .sidebar .sidebar-footer strong,.sidebar .sidebar-footer span{display:block}
+  .sidebar .logout-link{font-size:11px;padding:7px 10px}
+}
