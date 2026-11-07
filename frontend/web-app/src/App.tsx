@@ -346,92 +346,74 @@ function DriversDashboard({ token }: { token: string }) {
   </>
 }
 
-function DriversPage({ token, setError, setNotice }: { token: string; setError: (value: string) => void; setNotice: (value: string) => void }) {
-  const [drivers, setDrivers] = useState<Driver[]>([])
-  const [form, setForm] = useState<DriverForm>(emptyDriver)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [showForm, setShowForm] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const load = useCallback(async () => { const data = await api<Driver[]>('/user', token); setDrivers(data.filter(item => item.role === 'DRIVER')) }, [token])
-  useEffect(() => { void load().catch(err => setError(err.message)) }, [load, setError])
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setBusy(true); setError(''); setNotice('')
-    try {
-      if (editingId) {
-        await api<Driver>(`/user/${editingId}`, token, { method: 'PUT', body: JSON.stringify({ fullName: form.fullName, email: form.email }) })
-        setNotice('Driver details updated.')
-      } else {
-        await api<Driver>('/user', token, { method: 'POST', body: JSON.stringify({ ...form, role: 'DRIVER' }) })
-        setNotice('Driver account created.')
-      }
-      setForm(emptyDriver); setEditingId(null); setShowForm(false); await load()
-    } catch (err) { setError(err instanceof Error ? err.message : 'Unable to save driver.') }
-    finally { setBusy(false) }
-  }
-  function edit(driver: Driver) { setEditingId(driver.id); setForm({ fullName: driver.fullName, email: driver.email, password: '' }); setShowForm(true) }
-  async function deleteDriver(driver: Driver) {
-    if (!window.confirm(`Delete driver account for ${driver.fullName}? This disables sign-in but preserves historical records.`)) return
-    try { await api<void>(`/user/${driver.id}`, token, { method: 'DELETE' }); setNotice('Driver account deleted (deactivated).'); await load() }
-    catch (err) { setError(err instanceof Error ? err.message : 'Unable to delete driver.') }
-  }
-  return <>
-    <div className="page-intro"><div><h2>All drivers</h2><p>Create, update and delete driver accounts for your school.</p></div><button className="button primary" onClick={() => { setEditingId(null); setForm(emptyDriver); setShowForm(true) }}>+ Add driver</button></div>
-    {showForm && <section className="panel form-panel"><div className="panel-heading"><div><span className="section-kicker">DRIVER ACCOUNT</span><h3>{editingId ? 'Update driver' : 'Add new driver'}</h3></div></div><form onSubmit={submit}><div className="form-grid"><label className="field"><span>Full name *</span><TextInput required value={form.fullName} onChange={e => setForm({ ...form, fullName: e.target.value })} /></label><label className="field"><span>Email *</span><EmailInput required type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></label>{!editingId && <label className="field"><span>Temporary password *</span><PasswordInput required minLength={8} type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} /></label>}</div><div className="form-actions"><button type="button" className="button secondary" onClick={() => setShowForm(false)}>Cancel</button><button className="button primary" disabled={busy}>{busy ? 'Saving…' : 'Save driver'}</button></div></form></section>}
-    <section className="panel"><div className="panel-heading"><div><span className="section-kicker">SCHOOL DIRECTORY</span><h3>Driver accounts <small className="count-label">{drivers.length}</small></h3></div></div><div className="table-wrap"><table><thead><tr><th>Driver name</th><th>Email</th><th>Status</th><th>Actions</th></tr></thead><tbody>{drivers.map(driver => <tr key={driver.id}><td><strong>{driver.fullName}</strong></td><td>{driver.email}</td><td><span className={`status-pill ${driver.enabled ? 'active' : 'inactive'}`}>{driver.enabled ? 'ACTIVE' : 'INACTIVE'}</span></td><td className="actions-cell"><button className="table-action" onClick={() => edit(driver)}>Edit</button>{driver.enabled && <button className="table-action danger" onClick={() => void deleteDriver(driver)}>Delete</button>}</td></tr>)}{drivers.length === 0 && <tr><td colSpan={4} className="empty-cell">No drivers found. Add your first driver.</td></tr>}</tbody></table></div></section>
-    <p className="footnote">Deactivate is a soft delete: it disables login while preserving historical trip and audit records.</p>
-  </>
+type SchoolDriver = {
+  id: number; schoolId: number; driverCode: string; firstName: string; lastName: string
+  dateOfBirth: string | null; gender: string | null; phone: string; alternatePhone: string | null
+  email: string | null; address: string | null; city: string | null; state: string | null; pincode: string | null
+  licenseNumber: string; licenseType: string | null; licenseExpiryDate: string | null; joiningDate: string | null
+  emergencyContactName: string | null; emergencyContactPhone: string | null
+  status: 'ACTIVE' | 'INACTIVE'; createdAt: string; updatedAt: string
+}
+type SchoolDriverForm = Omit<SchoolDriver, 'id' | 'status' | 'createdAt' | 'updatedAt'>
+const emptySchoolDriver: SchoolDriverForm = {
+  schoolId: 0, driverCode: '', firstName: '', lastName: '', dateOfBirth: '', gender: '',
+  phone: '', alternatePhone: '', email: '', address: '', city: '', state: '', pincode: '',
+  licenseNumber: '', licenseType: '', licenseExpiryDate: '', joiningDate: '',
+  emergencyContactName: '', emergencyContactPhone: '',
 }
 
-function StudentsPage({ token, setError, setNotice }: { token: string; setError: (value: string) => void; setNotice: (value: string) => void }) {
-  const [students, setStudents] = useState<Student[]>([])
-  const [form, setForm] = useState<StudentForm>(emptyStudent)
+function DriversPage({ token, setError, setNotice }: { token: string; setError: (value: string) => void; setNotice: (value: string) => void }) {
+  const [drivers, setDrivers] = useState<SchoolDriver[]>([])
+  const [schools, setSchools] = useState<School[]>([])
+  const [form, setForm] = useState<SchoolDriverForm>(emptySchoolDriver)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [busy, setBusy] = useState(false)
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [selectedIds, setSelectedIds] = useState<number[]>([])
   const [openActionMenuId, setOpenActionMenuId] = useState<number | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [rows, schools] = await Promise.all([
-        api<Student[]>('/stu', token),
+      const [driverRows, schoolRows] = await Promise.all([
+        api<SchoolDriver[]>('/driver', token),
         api<School[]>('/school', token).catch(() => [] as School[]),
       ])
-      setStudents(rows)
-      setSelectedIds(current => current.filter(id => rows.some(student => student.id === id && student.status === 'ACTIVE')))
-      if (!form.schoolId && schools.length) setForm(current => ({ ...current, schoolId: schools[0].id }))
+      setDrivers(driverRows)
+      setSchools(schoolRows)
+      setForm(current => current.schoolId || !schoolRows.length ? current : { ...current, schoolId: schoolRows[0].id })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to load students.')
+      setError(err instanceof Error ? err.message : 'Unable to load drivers.')
     } finally {
       setLoading(false)
     }
-  }, [token, setError, form.schoolId])
+  }, [token, setError])
 
   useEffect(() => { void load() }, [load])
 
-  const filteredStudents = students.filter(student =>
-    [student.firstName, student.lastName, student.admissionNumber, student.className, student.parentName, student.parentPhone]
+  const filteredDrivers = drivers.filter(driver =>
+    [driver.driverCode, driver.firstName, driver.lastName, driver.phone, driver.email, driver.licenseNumber]
       .filter(Boolean).join(' ').toLowerCase().includes(search.toLowerCase())
   )
 
   function openCreateForm() {
     setEditingId(null)
-    setForm(emptyStudent)
+    setForm({ ...emptySchoolDriver, schoolId: schools[0]?.id || 0 })
     setShowForm(true)
   }
 
-  function editStudent(student: Student) {
-    setEditingId(student.id)
+  function editDriver(driver: SchoolDriver) {
+    setEditingId(driver.id)
     setForm({
-      schoolId: student.schoolId, firstName: student.firstName, lastName: student.lastName || '',
-      admissionNumber: student.admissionNumber, dateOfBirth: student.dateOfBirth || '',
-      gender: student.gender || '', className: student.className, section: student.section || '',
-      rollNumber: student.rollNumber || '', parentName: student.parentName, parentPhone: student.parentPhone,
-      parentEmail: student.parentEmail || '', emergencyContact: student.emergencyContact || '',
-      address: student.address || '',
+      schoolId: driver.schoolId, driverCode: driver.driverCode, firstName: driver.firstName,
+      lastName: driver.lastName || '', dateOfBirth: driver.dateOfBirth || '', gender: driver.gender || '',
+      phone: driver.phone, alternatePhone: driver.alternatePhone || '', email: driver.email || '',
+      address: driver.address || '', city: driver.city || '', state: driver.state || '',
+      pincode: driver.pincode || '', licenseNumber: driver.licenseNumber, licenseType: driver.licenseType || '',
+      licenseExpiryDate: driver.licenseExpiryDate || '', joiningDate: driver.joiningDate || '',
+      emergencyContactName: driver.emergencyContactName || '',
+      emergencyContactPhone: driver.emergencyContactPhone || '',
     })
     setShowForm(true)
   }
@@ -446,165 +428,115 @@ function StudentsPage({ token, setError, setNotice }: { token: string; setError:
         lastName: form.lastName || null,
         dateOfBirth: form.dateOfBirth || null,
         gender: form.gender || null,
-        section: form.section || null,
-        rollNumber: form.rollNumber || null,
-        parentEmail: form.parentEmail || null,
-        emergencyContact: form.emergencyContact || null,
+        alternatePhone: form.alternatePhone || null,
+        email: form.email || null,
         address: form.address || null,
+        city: form.city || null,
+        state: form.state || null,
+        pincode: form.pincode || null,
+        licenseType: form.licenseType || null,
+        licenseExpiryDate: form.licenseExpiryDate || null,
+        joiningDate: form.joiningDate || null,
+        emergencyContactName: form.emergencyContactName || null,
+        emergencyContactPhone: form.emergencyContactPhone || null,
       }
-      await api<Student>(editingId ? `/stu/${editingId}` : '/stu', token, {
+      await api<SchoolDriver>(editingId ? `/driver/${editingId}` : '/driver', token, {
         method: editingId ? 'PUT' : 'POST',
         body: JSON.stringify(payload),
       })
-      setNotice(editingId ? 'Student details updated successfully.' : 'Student added successfully.')
-      setShowForm(false); setEditingId(null); setForm(emptyStudent)
+      setNotice(editingId ? 'Driver details updated successfully.' : 'Driver added successfully.')
+      setShowForm(false); setEditingId(null); setForm(emptySchoolDriver)
       await load()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to save student.')
+      setError(err instanceof Error ? err.message : 'Unable to save driver.')
     } finally {
       setBusy(false)
     }
   }
 
-  async function deleteSelectedStudents() {
-    const selected = students.filter(student => selectedIds.includes(student.id) && student.status === 'ACTIVE')
-    if (!selected.length) return
-    if (!window.confirm(`Deactivate ${selected.length} selected student(s)? Historical transport records will be preserved.`)) return
-    setBusy(true); setError(''); setNotice('')
-    try {
-      for (const student of selected) {
-        await api<void>(`/stu/${student.id}`, token, { method: 'DELETE' })
-      }
-      setSelectedIds([])
-      setNotice(`${selected.length} student(s) deactivated successfully.`)
-      await load()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to delete all selected students. Refresh the list to see which records were deactivated.')
-      await load()
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  async function deleteStudent(student: Student) {
-    if (!window.confirm(`Deactivate student ${student.firstName} ${student.lastName || ''}?`)) return
+  async function deleteDriver(driver: SchoolDriver) {
+    if (!window.confirm(`Deactivate driver ${driver.firstName} ${driver.lastName || ''}? Historical transport records will be preserved.`)) return
     setError(''); setNotice('')
     try {
-      await api<void>(`/stu/${student.id}`, token, { method: 'DELETE' })
-      setNotice('Student deactivated successfully.')
+      await api<void>(`/driver/${driver.id}`, token, { method: 'DELETE' })
+      setNotice('Driver deactivated successfully.')
       await load()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to deactivate student.')
+      setError(err instanceof Error ? err.message : 'Unable to deactivate driver.')
     }
   }
 
   return <>
     {!showForm && <div className="page-intro">
-      <div><h2>Student management</h2><p>Add, update and manage students. Select students to perform bulk actions.</p></div>
+      <div><h2>Driver management</h2><p>Add, update and manage driver profiles and driving licence details.</p></div>
       <div className="page-header-actions">
-        <button className="button primary" onClick={openCreateForm}><Users size={15} /> Add Students</button>
-        <button className="button secondary" disabled={selectedIds.length === 0} onClick={() => setNotice('Bus assignment UI is ready; it will be connected when the backend student-to-bus assignment API is added.')}><BusFront size={15} /> Bus Assign ({selectedIds.length})</button>
-        <button className="button danger" disabled={selectedIds.length === 0} onClick={() => void deleteSelectedStudents()}><Users size={15} /> Delete Students ({selectedIds.length})</button>
+        <button className="button primary" onClick={openCreateForm}><UserRound size={15} /> Add Driver</button>
         <button className="button secondary" onClick={() => void load()} disabled={loading}><RefreshCw size={14} /> Refresh</button>
       </div>
     </div>}
-    {showForm && <div className="record-page-header"><button type="button" className="breadcrumb-back" onClick={() => { setShowForm(false); setEditingId(null) }}>Students</button><span>/</span><strong>{editingId ? 'Update student' : 'Add student'}</strong></div>}
+    {showForm && <div className="record-page-header"><button type="button" className="breadcrumb-back" onClick={() => { setShowForm(false); setEditingId(null) }}>Drivers</button><span>/</span><strong>{editingId ? 'Update driver' : 'Add driver'}</strong></div>}
 
     {showForm && <section className="panel form-panel">
-
       <form onSubmit={submit}>
         <div className="form-grid">
-          <label className="field"><span>School ID *</span><NumberInput type="number" min="1" required value={form.schoolId || ''} onChange={e => setForm({ ...form, schoolId: Number(e.target.value) })} /></label>
-          <label className="field"><span>Admission number *</span><TextInput required maxLength={50} value={form.admissionNumber} onChange={e => setForm({ ...form, admissionNumber: e.target.value })} /></label>
+          <label className="field"><span>School *</span><SelectInput required value={form.schoolId || ''} onChange={e => setForm({ ...form, schoolId: Number(e.target.value) })}><option value="">Select school</option>{schools.map(school => <option key={school.id} value={school.id}>{school.name} ({school.code})</option>)}</SelectInput></label>
+          <label className="field"><span>Driver code *</span><TextInput required maxLength={50} value={form.driverCode} onChange={e => setForm({ ...form, driverCode: e.target.value.toUpperCase() }} placeholder="e.g. DRV-001" /></label>
           <label className="field"><span>First name *</span><TextInput required maxLength={100} value={form.firstName} onChange={e => setForm({ ...form, firstName: e.target.value })} /></label>
-          <label className="field"><span>Last name</span><TextInput maxLength={100} value={form.lastName || ''} onChange={e => setForm({ ...form, lastName: e.target.value })} /></label>
+          <label className="field"><span>Last name *</span><TextInput required maxLength={100} value={form.lastName} onChange={e => setForm({ ...form, lastName: e.target.value })} /></label>
           <label className="field"><span>Date of birth</span><DateInput value={form.dateOfBirth || ''} onChange={value => setForm({ ...form, dateOfBirth: value })} /></label>
           <label className="field"><span>Gender</span><SelectInput value={form.gender || ''} onChange={e => setForm({ ...form, gender: e.target.value })}><option value="">Select gender</option><option value="MALE">Male</option><option value="FEMALE">Female</option><option value="OTHER">Other</option></SelectInput></label>
-          <label className="field"><span>Class *</span><TextInput required maxLength={50} value={form.className} onChange={e => setForm({ ...form, className: e.target.value })} placeholder="e.g. 5" /></label>
-          <label className="field"><span>Section</span><TextInput maxLength={20} value={form.section || ''} onChange={e => setForm({ ...form, section: e.target.value })} /></label>
-          <label className="field"><span>Roll number</span><TextInput maxLength={30} value={form.rollNumber || ''} onChange={e => setForm({ ...form, rollNumber: e.target.value })} /></label>
-          <label className="field"><span>Parent / guardian name *</span><TextInput required maxLength={150} value={form.parentName} onChange={e => setForm({ ...form, parentName: e.target.value })} /></label>
-          <label className="field"><span>Parent phone *</span><PhoneInput required type="tel" maxLength={15} value={form.parentPhone} onChange={e => setForm({ ...form, parentPhone: e.target.value })} /></label>
-          <label className="field"><span>Parent email</span><EmailInput type="email" maxLength={150} value={form.parentEmail || ''} onChange={e => setForm({ ...form, parentEmail: e.target.value })} /></label>
-          <label className="field"><span>Emergency contact</span><PhoneInput type="tel" maxLength={15} value={form.emergencyContact || ''} onChange={e => setForm({ ...form, emergencyContact: e.target.value })} /></label>
-          <label className="field field-wide"><span>Address</span><TextArea rows={2} maxLength={500} value={form.address || ''} onChange={e => setForm({ ...form, address: e.target.value })} /></label>
+          <label className="field"><span>Phone *</span><PhoneInput required maxLength={20} value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="Primary mobile number" /></label>
+          <label className="field"><span>Alternate phone</span><PhoneInput maxLength={20} value={form.alternatePhone || ''} onChange={e => setForm({ ...form, alternatePhone: e.target.value })} /></label>
+          <label className="field"><span>Email</span><EmailInput maxLength={150} value={form.email || ''} onChange={e => setForm({ ...form, email: e.target.value })} /></label>
+          <label className="field"><span>Driving licence number *</span><TextInput required maxLength={50} value={form.licenseNumber} onChange={e => setForm({ ...form, licenseNumber: e.target.value.toUpperCase() }} placeholder="Enter licence number" /></label>
+          <label className="field"><span>Licence type</span><SelectInput value={form.licenseType || ''} onChange={e => setForm({ ...form, licenseType: e.target.value })}><option value="">Select licence type</option><option value="LMV">LMV</option><option value="HMV">HMV</option><option value="TRANSPORT">Transport</option><option value="HEAVY_VEHICLE">Heavy vehicle</option></SelectInput></label>
+          <label className="field"><span>Licence expiry date</span><DateInput value={form.licenseExpiryDate || ''} onChange={value => setForm({ ...form, licenseExpiryDate: value })} /></label>
+          <label className="field"><span>Joining date</span><DateInput value={form.joiningDate || ''} onChange={value => setForm({ ...form, joiningDate: value })} /></label>
+          <label className="field"><span>Emergency contact name</span><TextInput maxLength={150} value={form.emergencyContactName || ''} onChange={e => setForm({ ...form, emergencyContactName: e.target.value })} /></label>
+          <label className="field"><span>Emergency contact phone</span><PhoneInput maxLength={20} value={form.emergencyContactPhone || ''} onChange={e => setForm({ ...form, emergencyContactPhone: e.target.value })} /></label>
+          <label className="field field-wide"><span>Address</span><TextArea rows={2} maxLength={1000} value={form.address || ''} onChange={e => setForm({ ...form, address: e.target.value })} /></label>
+          <label className="field"><span>City</span><TextInput maxLength={100} value={form.city || ''} onChange={e => setForm({ ...form, city: e.target.value })} /></label>
+          <label className="field"><span>State</span><TextInput maxLength={100} value={form.state || ''} onChange={e => setForm({ ...form, state: e.target.value })} /></label>
+          <label className="field"><span>Pincode</span><TextInput maxLength={15} value={form.pincode || ''} onChange={e => setForm({ ...form, pincode: e.target.value })} /></label>
         </div>
         <div className="form-actions">
           <button type="button" className="button secondary" onClick={() => { setShowForm(false); setEditingId(null) }}>Cancel</button>
-          <button className="button primary" disabled={busy}>{busy ? 'Saving…' : editingId ? 'Update student' : 'Save student'}</button>
+          <button className="button primary" disabled={busy || !schools.length}>{busy ? 'Saving…' : editingId ? 'Update driver' : 'Save driver'}</button>
         </div>
+        {!schools.length && <p className="student-subtext">Create an active school record before adding a driver.</p>}
       </form>
     </section>}
 
     {!showForm && <>
-    <section className="panel">
-      <div className="panel-heading student-list-heading">
-        <div><span className="section-kicker">SCHOOL DIRECTORY</span><h3>All students <small className="count-label">{filteredStudents.length}</small></h3></div>
-        <div className="table-header-tools">
-          <SearchInput className="student-search" placeholder="Search name, admission no., class…" value={search} onChange={e => setSearch(e.target.value)} />
-          <button type="button" className="button secondary report-button" onClick={() => downloadExcelReport('students-report.xls', 'Students Report', ['Student', 'Admission number', 'Class', 'Parent / guardian', 'Parent phone', 'Parent email', 'Date of birth', 'Gender', 'Status'], filteredStudents.map(student => [`${student.firstName} ${student.lastName || ''}`.trim(), student.admissionNumber, `${student.className}${student.section ? ` - ${student.section}` : ''}`, student.parentName, student.parentPhone, student.parentEmail || '', student.dateOfBirth || '', student.gender || '', student.status]))}>Export Excel</button>
-          <button type="button" className="button secondary report-button" onClick={() => downloadPdfReport('Students Report', ['Student', 'Admission number', 'Class', 'Parent / guardian', 'Parent phone', 'Status'], filteredStudents.map(student => [`${student.firstName} ${student.lastName || ''}`.trim(), student.admissionNumber, `${student.className}${student.section ? ` - ${student.section}` : ''}`, student.parentName, student.parentPhone, student.status]))}>Export PDF</button>
+      <section className="panel">
+        <div className="panel-heading student-list-heading">
+          <div><span className="section-kicker">SCHOOL DIRECTORY</span><h3>All drivers <small className="count-label">{filteredDrivers.length}</small></h3></div>
+          <div className="table-header-tools">
+            <SearchInput className="student-search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search driver, code, phone, licence…" />
+            <button type="button" className="button secondary report-button" onClick={() => downloadExcelReport('drivers-report.xls', 'Drivers Report', ['Driver code', 'Driver name', 'Phone', 'Alternate phone', 'Email', 'Driving licence', 'Licence type', 'Licence expiry', 'Joining date', 'School', 'Status'], filteredDrivers.map(driver => [driver.driverCode, `${driver.firstName} ${driver.lastName}`.trim(), driver.phone, driver.alternatePhone || '', driver.email || '', driver.licenseNumber, driver.licenseType || '', driver.licenseExpiryDate || '', driver.joiningDate || '', schools.find(school => school.id === driver.schoolId)?.name || '', driver.status]))}>Export Excel</button>
+            <button type="button" className="button secondary report-button" onClick={() => downloadPdfReport('Drivers Report', ['Driver code', 'Driver name', 'Phone', 'Driving licence', 'Licence expiry', 'School', 'Status'], filteredDrivers.map(driver => [driver.driverCode, `${driver.firstName} ${driver.lastName}`.trim(), driver.phone, driver.licenseNumber, driver.licenseExpiryDate || '', schools.find(school => school.id === driver.schoolId)?.name || '', driver.status]))}>Export PDF</button>
+          </div>
         </div>
-      </div>
-      <div className="table-wrap"><table>
-        <thead><tr><th className="select-column"><input aria-label="Select all active students" type="checkbox" checked={filteredStudents.filter(student => student.status === 'ACTIVE').length > 0 && filteredStudents.filter(student => student.status === 'ACTIVE').every(student => selectedIds.includes(student.id))} onChange={event => { const visibleActiveIds = filteredStudents.filter(student => student.status === 'ACTIVE').map(student => student.id); setSelectedIds(event.target.checked ? Array.from(new Set([...selectedIds, ...visibleActiveIds])) : selectedIds.filter(id => !visibleActiveIds.includes(id))) }} /></th><th className="row-actions-heading">Actions</th><th>Student</th><th>Admission no.</th><th>Class</th><th>Parent / guardian</th><th>Parent phone</th><th>Status</th></tr></thead>
-        <tbody>
-          {filteredStudents.map(student => <tr key={student.id}>
-            <td className="select-column"><input aria-label={`Select ${student.firstName}`} type="checkbox" disabled={student.status !== 'ACTIVE'} checked={selectedIds.includes(student.id)} onChange={event => setSelectedIds(current => event.target.checked ? [...current, student.id] : current.filter(id => id !== student.id))} /></td>
-            <td className="row-actions-cell"><div className="row-action-menu"><button type="button" className="row-action-trigger" aria-label={`Actions for ${student.firstName} ${student.lastName || ""}`} aria-haspopup="true" aria-expanded={openActionMenuId === student.id} onClick={() => setOpenActionMenuId(current => current === student.id ? null : student.id)}><MoreVertical size={18} /></button>{openActionMenuId === student.id && <div className="row-action-dropdown" role="menu"><button type="button" role="menuitem" onClick={() => { setOpenActionMenuId(null); editStudent(student) }}>Edit student</button>{student.status === 'ACTIVE' && <button type="button" role="menuitem" className="danger" onClick={() => { setOpenActionMenuId(null); void deleteStudent(student) }}>Delete student</button>}</div>}</div></td>
-            <td><strong>{student.firstName} {student.lastName || ''}</strong></td>
-            <td>{student.admissionNumber}</td><td>{student.className}{student.section ? ` - ${student.section}` : ''}</td>
-            <td>{student.parentName}</td><td>{student.parentPhone}</td>
-            <td><span className={`status-pill ${student.status === 'ACTIVE' ? 'active' : 'inactive'}`}>{student.status}</span></td>
-            
-          </tr>)}
-          {!loading && filteredStudents.length === 0 && <tr><td colSpan={8} className="empty-cell">{search ? 'No students match your search.' : 'No students found. Add your first student.'}</td></tr>}
-          {loading && <tr><td colSpan={8} className="empty-cell">Loading students…</td></tr>}
-        </tbody>
-      </table></div>
-    </section>
-    <p className="footnote">Deleting a student deactivates the record; historical transport and trip records are preserved.</p>
+        <div className="table-wrap"><table>
+          <thead><tr><th className="row-actions-heading">Actions</th><th>Driver</th><th>Driver code</th><th>Phone</th><th>Driving licence</th><th>Licence expiry</th><th>School</th><th>Status</th></tr></thead>
+          <tbody>
+            {filteredDrivers.map(driver => <tr key={driver.id}>
+              <td className="row-actions-cell"><div className="row-action-menu"><button type="button" className="row-action-trigger" aria-label={`Actions for ${driver.firstName}`} aria-haspopup="true" aria-expanded={openActionMenuId === driver.id} onClick={() => setOpenActionMenuId(current => current === driver.id ? null : driver.id)}><MoreVertical size={18} /></button>{openActionMenuId === driver.id && <div className="row-action-dropdown" role="menu"><button type="button" role="menuitem" onClick={() => { setOpenActionMenuId(null); editDriver(driver) }}>Edit driver</button>{driver.status === 'ACTIVE' && <button type="button" role="menuitem" className="danger" onClick={() => { setOpenActionMenuId(null); void deleteDriver(driver) }}>Delete driver</button>}</div>}</div></td>
+              <td><strong>{driver.firstName} {driver.lastName}</strong></td>
+              <td>{driver.driverCode}</td><td>{driver.phone}</td><td>{driver.licenseNumber}</td>
+              <td>{driver.licenseExpiryDate || '—'}</td>
+              <td>{schools.find(school => school.id === driver.schoolId)?.name || '—'}</td>
+              <td><span className={`status-pill ${driver.status === 'ACTIVE' ? 'active' : 'inactive'}`}>{driver.status}</span></td>
+            </tr>)}
+            {loading && <tr><td colSpan={8} className="empty-cell">Loading drivers…</td></tr>}
+            {!loading && filteredDrivers.length === 0 && <tr><td colSpan={8} className="empty-cell">{search ? 'No drivers match your search.' : 'No drivers found. Add your first driver.'}</td></tr>}
+          </tbody>
+        </table></div>
+      </section>
+      <p className="footnote">Deleting a driver deactivates the record and preserves historical transport records. Bus assignment will be managed separately.</p>
     </>}
-
   </>
 }
-
-function SchoolPage({ token, setError, setNotice }: { token: string; setError: (value: string) => void; setNotice: (value: string) => void }) {
-  const [school, setSchool] = useState<School | null>(null)
-  const [form, setForm] = useState<SchoolForm>(emptySchool)
-  const [editing, setEditing] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const load = useCallback(async () => {
-    setLoading(true)
-    try { const rows = await api<School[]>('/school', token); const current = rows[0] || null; setSchool(current); if (current) { const { id: _id, status: _status, createdAt: _created, updatedAt: _updated, ...details } = current; setForm(details) } else setForm(emptySchool) }
-    catch (err) { setError(err instanceof Error ? err.message : 'Unable to load school details.') }
-    finally { setLoading(false) }
-  }, [token, setError])
-  useEffect(() => { void load() }, [load])
-  const fields: { key: keyof SchoolForm; label: string; required?: boolean; type?: string }[] = [
-    { key: 'name', label: 'School name', required: true }, { key: 'code', label: 'School code', required: true },
-    { key: 'email', label: 'Official email', type: 'email' }, { key: 'phone', label: 'Phone number' },
-    { key: 'website', label: 'Website' }, { key: 'addressLine1', label: 'Address line 1', required: true },
-    { key: 'addressLine2', label: 'Address line 2' }, { key: 'city', label: 'City', required: true },
-    { key: 'state', label: 'State', required: true }, { key: 'pincode', label: 'PIN code', required: true },
-    { key: 'country', label: 'Country', required: true },
-  ]
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setSaving(true); setError(''); setNotice('')
-    try { const saved = await api<School>(school ? `/school/${school.id}` : '/school', token, { method: school ? 'PUT' : 'POST', body: JSON.stringify(form) }); setSchool(saved); setEditing(false); setNotice('School details saved successfully.'); await load() }
-    catch (err) { setError(err instanceof Error ? err.message : 'Unable to save school details.') }
-    finally { setSaving(false) }
-  }
-  return <><div className="page-intro"><div><h2>School information</h2><p>Manage the official details used across your school bus operations.</p></div>{school && <span className={`status-pill ${school.status.toLowerCase()}`}>{school.status}</span>}</div>
-    {loading ? <div className="loading">Loading school profile…</div> : <section className="panel"><div className="panel-heading"><div><span className="section-kicker">SCHOOL CONFIGURATION</span><h3>{school ? (editing ? 'Update school details' : school.name) : 'Create school profile'}</h3></div>{school && !editing && <button className="button primary" onClick={() => setEditing(true)}>Edit details</button>}</div>
-      {!school && !editing ? <div className="empty-state"><h3>No school profile found</h3><p>Create your school's profile to start configuring bus operations.</p><button className="button primary" onClick={() => setEditing(true)}>Create school profile</button></div> : editing ? <form onSubmit={submit}><div className="form-grid">{fields.map(field => <label className="field" key={field.key}><span>{field.label}{field.required && ' *'}</span><TextInput required={field.required} type={field.type || 'text'} value={form[field.key] || ''} onChange={e => setForm({ ...form, [field.key]: e.target.value })} /></label>)}</div><div className="form-actions"><button type="button" className="button secondary" onClick={() => setEditing(false)}>Cancel</button><button className="button primary" disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</button></div></form> : school && <><div className="details-grid">{fields.map(field => <Detail key={field.key} label={field.label} value={school[field.key]} />)}</div><div className="form-actions"><button className="button secondary" onClick={async () => { const status = school.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'; try { await api(`/school/${school.id}/status`, token, { method: 'PATCH', body: JSON.stringify({ status }) }); setNotice(`School marked ${status.toLowerCase()}.`); await load() } catch (err) { setError(err instanceof Error ? err.message : 'Unable to update status.') } }}>{school.status === 'ACTIVE' ? 'Deactivate school' : 'Activate school'}</button></div></>}
-    </section>}
-    <p className="footnote">This installation supports one school. School deletion is intentionally not available.</p>
-  </>
-}
-
-function Detail({ label, value }: { label: string; value: string | null | undefined }) { return <div className="detail"><span>{label}</span><strong>{value || 'Not provided'}</strong></div> }
 function BusesPage({ token, setError, setNotice }: { token: string; setError: (value: string) => void; setNotice: (value: string) => void }) {
   const [buses, setBuses] = useState<Bus[]>([])
   const [schools, setSchools] = useState<School[]>([])
@@ -785,6 +717,7 @@ function withStudentMenu(items: Menu[], role?: UserRole): Menu[] {
   return items.map(menu => {
     const name = menu.name.trim().toLowerCase()
     if (name === 'students') return { ...menu, path: '/students', subMenus: [] }
+    if (name === 'drivers' || name === 'driver') return { ...menu, path: '/drivers', subMenus: [] }
     if (name === 'bus' || name === 'buses' || name === 'busses') return { ...menu, path: '/bus', subMenus: [] }
     return menu
   })
