@@ -45,7 +45,9 @@ async function api<T>(path: string, token: string, options: RequestInit = {}): P
     throw new Error(message)
   }
   if (response.status === 204) return undefined as T
-  return response.json() as Promise<T>
+  const responseText = await response.text()
+  if (!responseText) return undefined as T
+  try { return JSON.parse(responseText) as T } catch { return responseText as T }
 }
 
 function App() {
