@@ -507,6 +507,7 @@ function StudentsPage({ token, setError, setNotice }: { token: string; setError:
       </form>
     </section>}
 
+    {!showForm && <>
     <section className="panel">
       <div className="panel-heading student-list-heading">
         <div><span className="section-kicker">SCHOOL DIRECTORY</span><h3>All students <small className="count-label">{filteredStudents.length}</small></h3></div>
@@ -530,6 +531,8 @@ function StudentsPage({ token, setError, setNotice }: { token: string; setError:
       </table></div>
     </section>
     <p className="footnote">Deleting a student deactivates the record; historical transport and trip records are preserved.</p>
+    </>}
+
   </>
 }
 
@@ -707,6 +710,7 @@ function BusesPage({ token, setError, setNotice }: { token: string; setError: (v
       </form>
     </section>}
 
+    {!showForm && <>
     <section className="panel">
       <div className="panel-heading student-list-heading">
         <div><span className="section-kicker">SCHOOL FLEET</span><h3>All buses <small className="count-label">{filteredBuses.length}</small></h3></div>
@@ -733,6 +737,8 @@ function BusesPage({ token, setError, setNotice }: { token: string; setError: (v
       </div>
     </section>
     <p className="footnote">Deleting a bus deactivates it instead of removing the database record. Driver and student assignments will be handled separately.</p>
+    </>}
+
   </>
 }
 
