@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Activity, ArrowUpRight, Bell, BusFront, Building2, CalendarDays, ChevronRight, Clock3, GraduationCap, MapPinned, Monitor, Moon, RefreshCw, Route, ShieldCheck, Sun, Users, UserRound } from 'lucide-react'
+import { Activity, ArrowUpRight, Bell, BusFront, Building2, CalendarDays, ChevronRight, Clock3, GraduationCap, MapPinned, Monitor, Moon, MoreVertical, RefreshCw, Route, ShieldCheck, Sun, Users, UserRound } from 'lucide-react'
 import { TextInput, NumberInput, EmailInput, PasswordInput, PhoneInput, DateInput, SearchInput, SelectInput, TextArea } from './components/ui/FormControls'
 import './App.css'
 
@@ -363,6 +363,7 @@ function StudentsPage({ token, setError, setNotice }: { token: string; setError:
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [selectedIds, setSelectedIds] = useState<number[]>([])
+  const [openActionMenuId, setOpenActionMenuId] = useState<number | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -512,15 +513,16 @@ function StudentsPage({ token, setError, setNotice }: { token: string; setError:
         <SearchInput className="student-search" placeholder="Search name, admission no., class…" value={search} onChange={e => setSearch(e.target.value)} />
       </div>
       <div className="table-wrap"><table>
-        <thead><tr><th><input aria-label="Select all active students" type="checkbox" checked={filteredStudents.filter(student => student.status === 'ACTIVE').length > 0 && filteredStudents.filter(student => student.status === 'ACTIVE').every(student => selectedIds.includes(student.id))} onChange={event => { const visibleActiveIds = filteredStudents.filter(student => student.status === 'ACTIVE').map(student => student.id); setSelectedIds(event.target.checked ? Array.from(new Set([...selectedIds, ...visibleActiveIds])) : selectedIds.filter(id => !visibleActiveIds.includes(id))) }} /></th><th>Student</th><th>Admission no.</th><th>Class</th><th>Parent / guardian</th><th>Parent phone</th><th>Status</th><th>Actions</th></tr></thead>
+        <thead><tr><th className="select-column"><input aria-label="Select all active students" type="checkbox" checked={filteredStudents.filter(student => student.status === 'ACTIVE').length > 0 && filteredStudents.filter(student => student.status === 'ACTIVE').every(student => selectedIds.includes(student.id))} onChange={event => { const visibleActiveIds = filteredStudents.filter(student => student.status === 'ACTIVE').map(student => student.id); setSelectedIds(event.target.checked ? Array.from(new Set([...selectedIds, ...visibleActiveIds])) : selectedIds.filter(id => !visibleActiveIds.includes(id))) }} /></th><th className="row-actions-heading">Actions</th><th>Student</th><th>Admission no.</th><th>Class</th><th>Parent / guardian</th><th>Parent phone</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody>
           {filteredStudents.map(student => <tr key={student.id}>
-            <td><input aria-label={`Select ${student.firstName}`} type="checkbox" disabled={student.status !== 'ACTIVE'} checked={selectedIds.includes(student.id)} onChange={event => setSelectedIds(current => event.target.checked ? [...current, student.id] : current.filter(id => id !== student.id))} /></td>
+            <td className="select-column"><input aria-label={`Select ${student.firstName}`} type="checkbox" disabled={student.status !== 'ACTIVE'} checked={selectedIds.includes(student.id)} onChange={event => setSelectedIds(current => event.target.checked ? [...current, student.id] : current.filter(id => id !== student.id))} /></td>
+            <td className="row-actions-cell"><div className="row-action-menu"><button type="button" className="row-action-trigger" aria-label={`Actions for ${student.firstName} ${student.lastName || ""}`} aria-haspopup="true" aria-expanded={openActionMenuId === student.id} onClick={() => setOpenActionMenuId(current => current === student.id ? null : student.id)}><MoreVertical size={18} /></button>{openActionMenuId === student.id && <div className="row-action-dropdown" role="menu"><button type="button" role="menuitem" onClick={() => { setOpenActionMenuId(null); editStudent(student) }}>Edit student</button>{student.status === 'ACTIVE' && <button type="button" role="menuitem" className="danger" onClick={() => { setOpenActionMenuId(null); void deleteStudent(student) }}>Delete student</button>}</div>}</div></td>
             <td><strong>{student.firstName} {student.lastName || ''}</strong><small className="student-subtext">ID #{student.id}</small></td>
             <td>{student.admissionNumber}</td><td>{student.className}{student.section ? ` - ${student.section}` : ''}</td>
             <td>{student.parentName}</td><td>{student.parentPhone}</td>
             <td><span className={`status-pill ${student.status === 'ACTIVE' ? 'active' : 'inactive'}`}>{student.status}</span></td>
-            <td className="actions-cell"><button className="table-action" onClick={() => editStudent(student)}>Edit</button>{student.status === 'ACTIVE' && <button className="table-action danger" onClick={() => void deleteStudent(student)}>Delete</button>}</td>
+            
           </tr>)}
           {!loading && filteredStudents.length === 0 && <tr><td colSpan={8} className="empty-cell">{search ? 'No students match your search.' : 'No students found. Add your first student.'}</td></tr>}
           {loading && <tr><td colSpan={8} className="empty-cell">Loading students…</td></tr>}
