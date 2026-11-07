@@ -480,7 +480,7 @@ function DriversPage({ token, setError, setNotice }: { token: string; setError: 
       <form onSubmit={submit}>
         <div className="form-grid">
           <label className="field"><span>School *</span><SelectInput required value={form.schoolId || ''} onChange={e => setForm({ ...form, schoolId: Number(e.target.value) })}><option value="">Select school</option>{schools.map(school => <option key={school.id} value={school.id}>{school.name} ({school.code})</option>)}</SelectInput></label>
-          <label className="field"><span>Driver code *</span><TextInput required maxLength={50} value={form.driverCode} onChange={e => setForm({ ...form, driverCode: e.target.value.toUpperCase() }} placeholder="e.g. DRV-001" /></label>
+          <label className="field"><span>Driver code *</span><TextInput required maxLength={50} value={form.driverCode} onChange={e => setForm({ ...form, driverCode: e.target.value.toUpperCase() })} placeholder="e.g. DRV-001" /></label>
           <label className="field"><span>First name *</span><TextInput required maxLength={100} value={form.firstName} onChange={e => setForm({ ...form, firstName: e.target.value })} /></label>
           <label className="field"><span>Last name *</span><TextInput required maxLength={100} value={form.lastName} onChange={e => setForm({ ...form, lastName: e.target.value })} /></label>
           <label className="field"><span>Date of birth</span><DateInput value={form.dateOfBirth || ''} onChange={value => setForm({ ...form, dateOfBirth: value })} /></label>
@@ -488,7 +488,7 @@ function DriversPage({ token, setError, setNotice }: { token: string; setError: 
           <label className="field"><span>Phone *</span><PhoneInput required maxLength={20} value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="Primary mobile number" /></label>
           <label className="field"><span>Alternate phone</span><PhoneInput maxLength={20} value={form.alternatePhone || ''} onChange={e => setForm({ ...form, alternatePhone: e.target.value })} /></label>
           <label className="field"><span>Email</span><EmailInput maxLength={150} value={form.email || ''} onChange={e => setForm({ ...form, email: e.target.value })} /></label>
-          <label className="field"><span>Driving licence number *</span><TextInput required maxLength={50} value={form.licenseNumber} onChange={e => setForm({ ...form, licenseNumber: e.target.value.toUpperCase() }} placeholder="Enter licence number" /></label>
+          <label className="field"><span>Driving licence number *</span><TextInput required maxLength={50} value={form.licenseNumber} onChange={e => setForm({ ...form, licenseNumber: e.target.value.toUpperCase() })} placeholder="Enter licence number" /></label>
           <label className="field"><span>Licence type</span><SelectInput value={form.licenseType || ''} onChange={e => setForm({ ...form, licenseType: e.target.value })}><option value="">Select licence type</option><option value="LMV">LMV</option><option value="HMV">HMV</option><option value="TRANSPORT">Transport</option><option value="HEAVY_VEHICLE">Heavy vehicle</option></SelectInput></label>
           <label className="field"><span>Licence expiry date</span><DateInput value={form.licenseExpiryDate || ''} onChange={value => setForm({ ...form, licenseExpiryDate: value })} /></label>
           <label className="field"><span>Joining date</span><DateInput value={form.joiningDate || ''} onChange={value => setForm({ ...form, joiningDate: value })} /></label>
