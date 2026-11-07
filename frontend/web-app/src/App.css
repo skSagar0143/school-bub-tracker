@@ -407,3 +407,11 @@ html[data-theme="dark"] .row-action-dropdown button{color:#edf3ff}
 html[data-theme="dark"] .row-action-dropdown button:hover{background:#263b5c;color:#fff}
 html[data-theme="dark"] .row-action-dropdown button.danger{color:#ff9ca2}
 html[data-theme="dark"] .row-action-dropdown button.danger:hover{background:rgba(255,120,130,.14);color:#ffc0c4}
+
+
+/* Dedicated add/edit page headers with a clickable breadcrumb back to the list. */
+.record-page-header{display:flex;align-items:center;gap:10px;min-height:44px;margin:0 0 16px;padding:0 2px;color:var(--text-muted,#8292a8);font-size:13px}
+.record-page-header .breadcrumb-back{padding:5px 0;border:0;background:transparent;color:var(--accent,#4389d7);font:600 13px 'DM Sans',sans-serif;cursor:pointer}
+.record-page-header .breadcrumb-back:hover{text-decoration:underline}
+.record-page-header strong{color:var(--text-main,#23344c);font-weight:700}
+.form-panel>.panel-heading{display:none}
