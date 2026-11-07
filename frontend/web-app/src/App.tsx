@@ -19,6 +19,18 @@ type School = {
 }
 type SchoolForm = Omit<School, 'id' | 'status' | 'createdAt' | 'updatedAt'>
 type DriverForm = { fullName: string; email: string; password: string }
+type Student = {
+  id: number; schoolId: number; firstName: string; lastName: string | null; admissionNumber: string
+  dateOfBirth: string | null; gender: string | null; className: string; section: string | null; rollNumber: string | null
+  parentName: string; parentPhone: string; parentEmail: string | null; emergencyContact: string | null
+  address: string | null; status: 'ACTIVE' | 'INACTIVE'; createdAt: string; updatedAt: string
+}
+type StudentForm = Omit<Student, 'id' | 'status' | 'createdAt' | 'updatedAt'>
+const emptyStudent: StudentForm = {
+  schoolId: 0, firstName: '', lastName: '', admissionNumber: '', dateOfBirth: '', gender: '',
+  className: '', section: '', rollNumber: '', parentName: '', parentPhone: '',
+  parentEmail: '', emergencyContact: '', address: '',
+}
 const emptySchool: SchoolForm = { name: '', code: '', email: '', phone: '', website: '', addressLine1: '', addressLine2: '', city: '', state: '', pincode: '', country: 'India' }
 const emptyDriver: DriverForm = { fullName: '', email: '', password: '' }
 
@@ -86,7 +98,7 @@ function App() {
     let active = true
     setLoading(true)
     api<MenuResponse>('/menu/me', token)
-      .then(result => { if (active) { setMenus(result.menus || []); if (currentPath === '/' || currentPath === '/login') navigate(result.defaultPath || '/') } })
+      .then(result => { if (active) { setMenus(withStudentMenu(result.menus || [], user?.role)); if (currentPath === '/' || currentPath === '/login') navigate(result.defaultPath || '/') } })
       .catch(() => { if (active) logout() })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
@@ -112,7 +124,7 @@ function App() {
       sessionStorage.setItem('currentUser', JSON.stringify(result.user))
       setToken(result.accessToken); setUser(result.user)
       const menuResult = await api<MenuResponse>('/menu/me', result.accessToken)
-      setMenus(menuResult.menus || [])
+      setMenus(withStudentMenu(menuResult.menus || [], result.user.role))
       navigate(menuResult.defaultPath || '/')
     } catch (err) {
       sessionStorage.removeItem('accessToken'); sessionStorage.removeItem('currentUser')
@@ -147,6 +159,7 @@ function App() {
           {error && <div className="message error">{error}</div>}
           {notice && <div className="message success">{notice}</div>}
           {currentPath === '/school' ? <SchoolPage token={token} setError={setError} setNotice={setNotice} /> :
+            (currentPath === '/students' || currentPath === '/stu') ? <StudentsPage token={token} setError={setError} setNotice={setNotice} /> :
             currentPath === '/drivers' ? <DriversPage token={token} setError={setError} setNotice={setNotice} /> :
             currentPath === '/drivers/dashboard' ? <DriversDashboard token={token} /> :
             <DashboardPage user={user} path={currentPath} token={token} menus={menus} navigate={navigate} />}
@@ -321,6 +334,158 @@ function DriversPage({ token, setError, setNotice }: { token: string; setError: 
   </>
 }
 
+function StudentsPage({ token, setError, setNotice }: { token: string; setError: (value: string) => void; setNotice: (value: string) => void }) {
+  const [students, setStudents] = useState<Student[]>([])
+  const [form, setForm] = useState<StudentForm>(emptyStudent)
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [showForm, setShowForm] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const [rows, schools] = await Promise.all([
+        api<Student[]>('/stu', token),
+        api<School[]>('/school', token).catch(() => [] as School[]),
+      ])
+      setStudents(rows)
+      if (!form.schoolId && schools.length) setForm(current => ({ ...current, schoolId: schools[0].id }))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to load students.')
+    } finally {
+      setLoading(false)
+    }
+  }, [token, setError, form.schoolId])
+
+  useEffect(() => { void load() }, [load])
+
+  const filteredStudents = students.filter(student =>
+    [student.firstName, student.lastName, student.admissionNumber, student.className, student.parentName, student.parentPhone]
+      .filter(Boolean).join(' ').toLowerCase().includes(search.toLowerCase())
+  )
+
+  function openCreateForm() {
+    setEditingId(null)
+    setForm(emptyStudent)
+    setShowForm(true)
+  }
+
+  function editStudent(student: Student) {
+    setEditingId(student.id)
+    setForm({
+      schoolId: student.schoolId, firstName: student.firstName, lastName: student.lastName || '',
+      admissionNumber: student.admissionNumber, dateOfBirth: student.dateOfBirth || '',
+      gender: student.gender || '', className: student.className, section: student.section || '',
+      rollNumber: student.rollNumber || '', parentName: student.parentName, parentPhone: student.parentPhone,
+      parentEmail: student.parentEmail || '', emergencyContact: student.emergencyContact || '',
+      address: student.address || '',
+    })
+    setShowForm(true)
+  }
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setBusy(true); setError(''); setNotice('')
+    try {
+      const payload = {
+        ...form,
+        schoolId: Number(form.schoolId),
+        lastName: form.lastName || null,
+        dateOfBirth: form.dateOfBirth || null,
+        gender: form.gender || null,
+        section: form.section || null,
+        rollNumber: form.rollNumber || null,
+        parentEmail: form.parentEmail || null,
+        emergencyContact: form.emergencyContact || null,
+        address: form.address || null,
+      }
+      await api<Student>(editingId ? `/stu/${editingId}` : '/stu', token, {
+        method: editingId ? 'PUT' : 'POST',
+        body: JSON.stringify(payload),
+      })
+      setNotice(editingId ? 'Student details updated successfully.' : 'Student added successfully.')
+      setShowForm(false); setEditingId(null); setForm(emptyStudent)
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to save student.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function deleteStudent(student: Student) {
+    if (!window.confirm(`Deactivate student ${student.firstName} ${student.lastName || ''}?`)) return
+    setError(''); setNotice('')
+    try {
+      await api<void>(`/stu/${student.id}`, token, { method: 'DELETE' })
+      setNotice('Student deactivated successfully.')
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to deactivate student.')
+    }
+  }
+
+  return <>
+    <div className="page-intro">
+      <div><h2>Student management</h2><p>Add students, maintain their records and manage the school directory.</p></div>
+      <div className="page-header-actions">
+        <button className="button secondary" onClick={() => void load()} disabled={loading}><RefreshCw size={14} /> Refresh</button>
+        <button className="button primary" onClick={openCreateForm}><Users size={15} /> Add student</button>
+      </div>
+    </div>
+
+    {showForm && <section className="panel form-panel">
+      <div className="panel-heading"><div><span className="section-kicker">STUDENT RECORD</span><h3>{editingId ? 'Update student' : 'Add new student'}</h3></div></div>
+      <form onSubmit={submit}>
+        <div className="form-grid">
+          <label className="field"><span>School ID *</span><input type="number" min="1" required value={form.schoolId || ''} onChange={e => setForm({ ...form, schoolId: Number(e.target.value) })} /></label>
+          <label className="field"><span>Admission number *</span><input required maxLength={50} value={form.admissionNumber} onChange={e => setForm({ ...form, admissionNumber: e.target.value })} /></label>
+          <label className="field"><span>First name *</span><input required maxLength={100} value={form.firstName} onChange={e => setForm({ ...form, firstName: e.target.value })} /></label>
+          <label className="field"><span>Last name</span><input maxLength={100} value={form.lastName || ''} onChange={e => setForm({ ...form, lastName: e.target.value })} /></label>
+          <label className="field"><span>Date of birth</span><input type="date" value={form.dateOfBirth || ''} onChange={e => setForm({ ...form, dateOfBirth: e.target.value })} /></label>
+          <label className="field"><span>Gender</span><select value={form.gender || ''} onChange={e => setForm({ ...form, gender: e.target.value })}><option value="">Select gender</option><option value="MALE">Male</option><option value="FEMALE">Female</option><option value="OTHER">Other</option></select></label>
+          <label className="field"><span>Class *</span><input required maxLength={50} value={form.className} onChange={e => setForm({ ...form, className: e.target.value })} placeholder="e.g. 5" /></label>
+          <label className="field"><span>Section</span><input maxLength={20} value={form.section || ''} onChange={e => setForm({ ...form, section: e.target.value })} /></label>
+          <label className="field"><span>Roll number</span><input maxLength={30} value={form.rollNumber || ''} onChange={e => setForm({ ...form, rollNumber: e.target.value })} /></label>
+          <label className="field"><span>Parent / guardian name *</span><input required maxLength={150} value={form.parentName} onChange={e => setForm({ ...form, parentName: e.target.value })} /></label>
+          <label className="field"><span>Parent phone *</span><input required type="tel" maxLength={15} value={form.parentPhone} onChange={e => setForm({ ...form, parentPhone: e.target.value })} /></label>
+          <label className="field"><span>Parent email</span><input type="email" maxLength={150} value={form.parentEmail || ''} onChange={e => setForm({ ...form, parentEmail: e.target.value })} /></label>
+          <label className="field"><span>Emergency contact</span><input type="tel" maxLength={15} value={form.emergencyContact || ''} onChange={e => setForm({ ...form, emergencyContact: e.target.value })} /></label>
+          <label className="field field-wide"><span>Address</span><textarea rows={2} maxLength={500} value={form.address || ''} onChange={e => setForm({ ...form, address: e.target.value })} /></label>
+        </div>
+        <div className="form-actions">
+          <button type="button" className="button secondary" onClick={() => { setShowForm(false); setEditingId(null) }}>Cancel</button>
+          <button className="button primary" disabled={busy}>{busy ? 'Saving…' : editingId ? 'Update student' : 'Save student'}</button>
+        </div>
+      </form>
+    </section>}
+
+    <section className="panel">
+      <div className="panel-heading student-list-heading">
+        <div><span className="section-kicker">SCHOOL DIRECTORY</span><h3>All students <small className="count-label">{filteredStudents.length}</small></h3></div>
+        <input className="student-search" type="search" placeholder="Search name, admission no., class…" value={search} onChange={e => setSearch(e.target.value)} />
+      </div>
+      <div className="table-wrap"><table>
+        <thead><tr><th>Student</th><th>Admission no.</th><th>Class</th><th>Parent / guardian</th><th>Parent phone</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>
+          {filteredStudents.map(student => <tr key={student.id}>
+            <td><strong>{student.firstName} {student.lastName || ''}</strong><small className="student-subtext">ID #{student.id}</small></td>
+            <td>{student.admissionNumber}</td><td>{student.className}{student.section ? ` - ${student.section}` : ''}</td>
+            <td>{student.parentName}</td><td>{student.parentPhone}</td>
+            <td><span className={`status-pill ${student.status === 'ACTIVE' ? 'active' : 'inactive'}`}>{student.status}</span></td>
+            <td className="actions-cell"><button className="table-action" onClick={() => editStudent(student)}>Edit</button>{student.status === 'ACTIVE' && <button className="table-action danger" onClick={() => void deleteStudent(student)}>Delete</button>}</td>
+          </tr>)}
+          {!loading && filteredStudents.length === 0 && <tr><td colSpan={7} className="empty-cell">{search ? 'No students match your search.' : 'No students found. Add your first student.'}</td></tr>}
+          {loading && <tr><td colSpan={7} className="empty-cell">Loading students…</td></tr>}
+        </tbody>
+      </table></div>
+    </section>
+    <p className="footnote">Deleting a student deactivates the record; historical transport and trip records are preserved.</p>
+  </>
+}
+
 function SchoolPage({ token, setError, setNotice }: { token: string; setError: (value: string) => void; setNotice: (value: string) => void }) {
   const [school, setSchool] = useState<School | null>(null)
   const [form, setForm] = useState<SchoolForm>(emptySchool)
@@ -357,6 +522,11 @@ function SchoolPage({ token, setError, setNotice }: { token: string; setError: (
 }
 
 function Detail({ label, value }: { label: string; value: string | null | undefined }) { return <div className="detail"><span>{label}</span><strong>{value || 'Not provided'}</strong></div> }
+function withStudentMenu(items: Menu[], role?: UserRole): Menu[] {
+  if (role !== 'SCHOOL_ADMIN') return items
+  const hasStudentPage = flattenMenus(items).some(item => item.path === '/students' || item.path === '/stu')
+  return hasStudentPage ? items : [...items, { id: -100, name: 'Students', path: '/students', icon: 'users', sequences: 999, subMenus: [] }]
+}
 function flattenMenus(items: Menu[]): Menu[] { return items.flatMap(item => [item, ...flattenMenus(item.subMenus || [])]) }
 function pageTitle(path: string) { return path.split('/').filter(Boolean).map(part => part.replace(/-/g, ' ').replace(/^\w/, char => char.toUpperCase())).join(' / ') || 'Dashboard' }
 function initials(name: string) { return name.split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase() }
