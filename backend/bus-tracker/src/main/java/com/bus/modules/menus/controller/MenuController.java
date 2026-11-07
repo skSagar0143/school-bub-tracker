@@ -1,3 +1,4 @@
+
 package com.bus.modules.menus.controller;
 
 import java.util.Arrays;
@@ -13,11 +14,13 @@ import com.bus.modules.menus.dto.CurrentUserMenuResponse;
 import com.bus.modules.menus.service.MenuService;
 import com.bus.modules.user.entity.UserRole;
 
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/menu")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "bearerAuth")
 public class MenuController {
 
 	private final MenuService menuService;
