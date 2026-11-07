@@ -240,7 +240,7 @@ function App() {
             currentPath === '/drivers' ? <DriversPage token={token} setError={setError} setNotice={setNotice} /> :
             (currentPath === '/routes' || currentPath === '/route') ? <RoutesPage token={token} setError={setError} setNotice={setNotice} /> :
             (currentPath === '/route-stops' || currentPath === '/route-stop' || currentPath === '/routestops') ? <RouteStopsPage token={token} setError={setError} setNotice={setNotice} /> :
-            (currentPath === '/bus-assignments' || currentPath === '/bus-assignment') ? <BusAssignmentsPage token={token} setError={setError} setNotice={setNotice} /> :
+            (currentPath === '/route-assignments' || currentPath === '/route-assignment' || currentPath === '/bus-assignments' || currentPath === '/bus-assignment') ? <BusAssignmentsPage token={token} setError={setError} setNotice={setNotice} /> :
             (currentPath === '/driver-assignments' || currentPath === '/driver-assignment') ? <DriverAssignmentsPage token={token} setError={setError} setNotice={setNotice} /> :
             currentPath === '/drivers/dashboard' ? <DriversDashboard token={token} /> :
             <DashboardPage user={user} path={currentPath} token={token} menus={menus} navigate={navigate} />}
@@ -1461,21 +1461,11 @@ function withStudentMenu(items: Menu[], role?: UserRole): Menu[] {
     if (name === 'bus' || name === 'buses' || name === 'busses') return { ...menu, path: '/bus', subMenus: [] }
     if (name === 'routes' || name === 'route') return { ...menu, path: '/routes', subMenus: [] }
     if (name === 'route stops' || name === 'route stop' || name === 'routestops') return { ...menu, path: '/route-stops', subMenus: [] }
-    if (name === 'bus assignment' || name === 'bus assignments') return { ...menu, path: '/bus-assignments', subMenus: [] }
-    if (name === 'driver assignment' || name === 'driver assignments') return { ...menu, path: '/driver-assignments', subMenus: [] }
+    if (name === 'route assignment' || name === 'route assignments') return { ...menu, path: menu.path || '/route-assignments', subMenus: [] }
+    if (name === 'bus assignment' || name === 'bus assignments') return { ...menu, path: menu.path || '/bus-assignments', subMenus: [] }
+    if (name === 'driver assignment' || name === 'driver assignments') return { ...menu, path: menu.path || '/driver-assignments', subMenus: [] }
     return menu
   })
-  const flat = flattenMenus(normalized)
-  let nextId = Math.max(0, ...flat.map(menu => Number(menu.id) || 0)) + 1
-  const addIfMissing = (names: string[], path: string, name: string, icon: string) => {
-    if (flattenMenus(normalized).some(menu => menu.path === path || names.includes(menu.name.trim().toLowerCase()))) return
-    const item = { id: nextId++, name, path, icon, sequences: nextId, subMenus: [] } as Menu
-    const routeStopsIndex = normalized.findIndex(menu => menu.path === '/route-stops')
-    if (routeStopsIndex >= 0) normalized.splice(routeStopsIndex + 1, 0, item)
-    else normalized.push(item)
-  }
-  addIfMissing(['bus assignment', 'bus assignments'], '/bus-assignments', 'Bus Assignment', 'bus-front')
-  addIfMissing(['driver assignment', 'driver assignments'], '/driver-assignments', 'Driver Assignment', 'user-round')
   return normalized
 }
 function flattenMenus(items: Menu[]): Menu[] { return items.flatMap(item => [item, ...flattenMenus(item.subMenus || [])]) }
