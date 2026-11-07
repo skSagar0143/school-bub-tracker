@@ -314,3 +314,27 @@ html[data-theme="light"] .reference-dashboard{width:100%;max-width:none}
   html[data-theme="light"] .content{padding:15px 10px 22px}
   html[data-theme="light"] .topbar{padding-left:10px;padding-right:10px}
 }
+
+
+/* Student management page */
+.page-header-actions{display:flex;align-items:center;gap:9px;flex-shrink:0}
+.page-header-actions .button{display:inline-flex;align-items:center;gap:7px}
+.student-list-heading{align-items:center;gap:14px}
+.student-search{width:min(320px,42%);min-width:190px;padding:10px 12px;border:1px solid #dce4ef;border-radius:8px;background:#f8fafd;color:#263950;font-size:12px;outline:none}
+.student-search:focus{border-color:#668cf0;box-shadow:0 0 0 3px rgba(102,140,240,.12)}
+.student-subtext{display:block;margin-top:4px;color:#8b98aa;font-size:10px}
+.field-wide{grid-column:1/-1}
+.field textarea{width:100%;box-sizing:border-box;resize:vertical;min-height:65px;padding:11px 12px;border:1px solid #dce4ef;border-radius:7px;background:#f8fafd;color:#263950;font:13px 'DM Sans',sans-serif;outline:none}
+.field textarea:focus{border-color:#668cf0;box-shadow:0 0 0 3px rgba(102,140,240,.12)}
+.page-header-actions .button svg{flex-shrink:0}
+html[data-theme="dark"] .student-search,html[data-theme="dark"] .field textarea{background:rgba(8,20,43,.75);border-color:rgba(135,165,215,.25);color:#e8efff}
+html[data-theme="dark"] .student-list-heading{border-color:rgba(135,165,215,.18)}
+html[data-theme="dark"] .student-subtext{color:#91a4c4}
+@media(max-width:650px){
+  .page-intro{align-items:flex-start;gap:12px;flex-wrap:wrap}
+  .page-header-actions{width:100%}
+  .page-header-actions .button{flex:1;justify-content:center}
+  .student-list-heading{align-items:stretch;flex-direction:column}
+  .student-search{width:100%;min-width:0;box-sizing:border-box}
+  .field-wide{grid-column:auto}
+}
