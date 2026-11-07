@@ -161,7 +161,7 @@ function App() {
           {error && <div className="message error">{error}</div>}
           {notice && <div className="message success">{notice}</div>}
           {currentPath === '/school' ? <SchoolPage token={token} setError={setError} setNotice={setNotice} /> :
-            (currentPath === '/students' || currentPath === '/students/add' || currentPath === '/stu') ? <StudentsPage key={currentPath} initialAdd={currentPath === '/students/add'} token={token} setError={setError} setNotice={setNotice} /> :
+            (currentPath === '/students' || currentPath === '/stu') ? <StudentsPage token={token} setError={setError} setNotice={setNotice} /> :
             currentPath === '/drivers' ? <DriversPage token={token} setError={setError} setNotice={setNotice} /> :
             currentPath === '/drivers/dashboard' ? <DriversDashboard token={token} /> :
             <DashboardPage user={user} path={currentPath} token={token} menus={menus} navigate={navigate} />}
@@ -348,6 +348,7 @@ function StudentsPage({ initialAdd = false, token, setError, setNotice }: { init
   const [busy, setBusy] = useState(false)
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [selectedIds, setSelectedIds] = useState<number[]>([])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -357,6 +358,7 @@ function StudentsPage({ initialAdd = false, token, setError, setNotice }: { init
         api<School[]>('/school', token).catch(() => [] as School[]),
       ])
       setStudents(rows)
+      setSelectedIds(current => current.filter(id => rows.some(student => student.id === id && student.status === 'ACTIVE')))
       if (!form.schoolId && schools.length) setForm(current => ({ ...current, schoolId: schools[0].id }))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to load students.')
@@ -421,6 +423,26 @@ function StudentsPage({ initialAdd = false, token, setError, setNotice }: { init
     }
   }
 
+  async function deleteSelectedStudents() {
+    const selected = students.filter(student => selectedIds.includes(student.id) && student.status === 'ACTIVE')
+    if (!selected.length) return
+    if (!window.confirm(`Deactivate ${selected.length} selected student(s)? Historical transport records will be preserved.`)) return
+    setBusy(true); setError(''); setNotice('')
+    try {
+      for (const student of selected) {
+        await api<void>(`/stu/${student.id}`, token, { method: 'DELETE' })
+      }
+      setSelectedIds([])
+      setNotice(`${selected.length} student(s) deactivated successfully.`)
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to delete all selected students. Refresh the list to see which records were deactivated.')
+      await load()
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function deleteStudent(student: Student) {
     if (!window.confirm(`Deactivate student ${student.firstName} ${student.lastName || ''}?`)) return
     setError(''); setNotice('')
@@ -435,10 +457,12 @@ function StudentsPage({ initialAdd = false, token, setError, setNotice }: { init
 
   return <>
     <div className="page-intro">
-      <div><h2>Student management</h2><p>Add students, maintain their records and manage the school directory.</p></div>
+      <div><h2>Student management</h2><p>Add, update and manage students. Select students to perform bulk actions.</p></div>
       <div className="page-header-actions">
+        <button className="button primary" onClick={openCreateForm}><Users size={15} /> Add Students</button>
+        <button className="button secondary" disabled={selectedIds.length === 0} onClick={() => setNotice('Bus assignment UI is ready; it will be connected when the backend student-to-bus assignment API is added.')}><BusFront size={15} /> Bus Assign ({selectedIds.length})</button>
+        <button className="button danger" disabled={selectedIds.length === 0} onClick={() => void deleteSelectedStudents()}><Users size={15} /> Delete Students ({selectedIds.length})</button>
         <button className="button secondary" onClick={() => void load()} disabled={loading}><RefreshCw size={14} /> Refresh</button>
-        <button className="button primary" onClick={openCreateForm}><Users size={15} /> Add student</button>
       </div>
     </div>
 
@@ -474,17 +498,18 @@ function StudentsPage({ initialAdd = false, token, setError, setNotice }: { init
         <input className="student-search" type="search" placeholder="Search name, admission no., class…" value={search} onChange={e => setSearch(e.target.value)} />
       </div>
       <div className="table-wrap"><table>
-        <thead><tr><th>Student</th><th>Admission no.</th><th>Class</th><th>Parent / guardian</th><th>Parent phone</th><th>Status</th><th>Actions</th></tr></thead>
+        <thead><tr><th><input aria-label="Select all active students" type="checkbox" checked={filteredStudents.filter(student => student.status === 'ACTIVE').length > 0 && filteredStudents.filter(student => student.status === 'ACTIVE').every(student => selectedIds.includes(student.id))} onChange={event => setSelectedIds(event.target.checked ? Array.from(new Set([...selectedIds, ...filteredStudents.filter(student => student.status === 'ACTIVE').map(student => student.id)])) : selectedIds.filter(id => !filteredStudents.some(student => student.id === id))} /></th><th>Student</th><th>Admission no.</th><th>Class</th><th>Parent / guardian</th><th>Parent phone</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody>
           {filteredStudents.map(student => <tr key={student.id}>
+            <td><input aria-label={`Select ${student.firstName}`} type="checkbox" disabled={student.status !== 'ACTIVE'} checked={selectedIds.includes(student.id)} onChange={event => setSelectedIds(current => event.target.checked ? [...current, student.id] : current.filter(id => id !== student.id))} /></td>
             <td><strong>{student.firstName} {student.lastName || ''}</strong><small className="student-subtext">ID #{student.id}</small></td>
             <td>{student.admissionNumber}</td><td>{student.className}{student.section ? ` - ${student.section}` : ''}</td>
             <td>{student.parentName}</td><td>{student.parentPhone}</td>
             <td><span className={`status-pill ${student.status === 'ACTIVE' ? 'active' : 'inactive'}`}>{student.status}</span></td>
             <td className="actions-cell"><button className="table-action" onClick={() => editStudent(student)}>Edit</button>{student.status === 'ACTIVE' && <button className="table-action danger" onClick={() => void deleteStudent(student)}>Delete</button>}</td>
           </tr>)}
-          {!loading && filteredStudents.length === 0 && <tr><td colSpan={7} className="empty-cell">{search ? 'No students match your search.' : 'No students found. Add your first student.'}</td></tr>}
-          {loading && <tr><td colSpan={7} className="empty-cell">Loading students…</td></tr>}
+          {!loading && filteredStudents.length === 0 && <tr><td colSpan={8} className="empty-cell">{search ? 'No students match your search.' : 'No students found. Add your first student.'}</td></tr>}
+          {loading && <tr><td colSpan={8} className="empty-cell">Loading students…</td></tr>}
         </tbody>
       </table></div>
     </section>
@@ -530,17 +555,9 @@ function SchoolPage({ token, setError, setNotice }: { token: string; setError: (
 function Detail({ label, value }: { label: string; value: string | null | undefined }) { return <div className="detail"><span>{label}</span><strong>{value || 'Not provided'}</strong></div> }
 function withStudentMenu(items: Menu[], role?: UserRole): Menu[] {
   if (role !== 'SCHOOL_ADMIN') return items
-  return items.map(menu => {
-    if (menu.name.toLowerCase() !== 'students') return menu
-    return {
-      ...menu,
-      path: null,
-      subMenus: [
-        { id: -241, name: 'All Students', path: '/students', icon: 'users', sequences: 1, subMenus: [] },
-        { id: -242, name: 'Add Student', path: '/students/add', icon: 'user-plus', sequences: 2, subMenus: [] },
-      ],
-    }
-  })
+  return items.map(menu => menu.name.trim().toLowerCase() === 'students'
+    ? { ...menu, path: '/students', subMenus: [] }
+    : menu)
 }
 function flattenMenus(items: Menu[]): Menu[] { return items.flatMap(item => [item, ...flattenMenus(item.subMenus || [])]) }
 function pageTitle(path: string) { return path.split('/').filter(Boolean).map(part => part.replace(/-/g, ' ').replace(/^\w/, char => char.toUpperCase())).join(' / ') || 'Dashboard' }
