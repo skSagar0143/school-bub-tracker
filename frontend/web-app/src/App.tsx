@@ -707,7 +707,7 @@ function BusesPage({ token, setError, setNotice }: { token: string; setError: (v
     <section className="panel">
       <div className="panel-heading student-list-heading">
         <div><span className="section-kicker">SCHOOL FLEET</span><h3>All buses <small className="count-label">{filteredBuses.length}</small></h3></div>
-        <SearchInput className="student-search"{search} onChange={e => setSearch(e.target.value)} placeholder="Search bus number, registration, model…" />
+        <SearchInput className="student-search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search bus number, registration, model…" />
       </div>
       <div className="table-wrap">
         <table>
