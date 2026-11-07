@@ -378,3 +378,8 @@ html[data-theme="dark"] .ui-input{--field-bg:rgba(8,20,43,.78);--field-border:rg
 html[data-theme="dark"] .date-popover{--field-border:rgba(135,165,215,.22);--field-text:#e8efff;background:#101e35;border-color:var(--field-border)}
 html[data-theme="dark"] .date-calendar-grid>button{color:#e8efff}
 @media(max-width:650px){.date-popover{width:min(290px,calc(100vw - 56px))}}
+
+/* Ensure shared control styling wins over legacy field selectors */
+.field .ui-input{min-height:44px;border:1px solid var(--field-border,#dce3ed);border-radius:10px;padding:11px 13px;background:var(--field-bg,#fff);color:var(--field-text,#23344c);font:500 13px 'DM Sans',sans-serif}
+.field .ui-input:focus{border-color:#4389d7;box-shadow:0 0 0 3px rgba(67,137,215,.14)}
+.field .date-trigger{display:flex;align-items:center;justify-content:space-between;text-align:left;cursor:pointer}
