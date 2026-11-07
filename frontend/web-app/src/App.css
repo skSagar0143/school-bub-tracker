@@ -415,3 +415,10 @@ html[data-theme="dark"] .row-action-dropdown button.danger:hover{background:rgba
 .record-page-header .breadcrumb-back:hover{text-decoration:underline}
 .record-page-header strong{color:var(--text-main,#23344c);font-weight:700}
 .form-panel>.panel-heading{display:none}
+
+
+.table-header-tools{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.table-header-tools .student-search{min-width:220px}
+.report-button{white-space:nowrap}
+@media(max-width:900px){.table-header-tools{width:100%;justify-content:flex-start}.table-header-tools .student-search{flex:1;min-width:180px}}
+@media(max-width:560px){.table-header-tools .student-search{flex-basis:100%;width:100%}.report-button{flex:1}}
