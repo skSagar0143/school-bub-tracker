@@ -338,3 +338,8 @@ html[data-theme="dark"] .student-subtext{color:#91a4c4}
   .student-search{width:100%;min-width:0;box-sizing:border-box}
   .field-wide{grid-column:auto}
 }
+
+/* Student bulk action button */
+.page-header-actions .button.danger{background:#c83f55;color:#fff;border:1px solid #c83f55}
+.page-header-actions .button.danger:hover:not(:disabled){background:#ad3045}
+.page-header-actions .button:disabled{opacity:.48;cursor:not-allowed}
