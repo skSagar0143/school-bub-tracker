@@ -7,7 +7,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/sm'
 type UserRole = 'SCHOOL_ADMIN' | 'DRIVER' | 'STUDENT' | 'PARENT'
 type LoginUser = { id: string; fullName: string; email: string; role: UserRole; enabled: boolean }
 type LoginResponse = { tokenType: string; accessToken: string; refreshToken: string; expiresInSeconds: number; user: LoginUser }
-type Menu = { id: number; code: string; title: string; path: string | null; icon: string | null; sortOrder: number; children: Menu[] }
+type Menu = { id: number; name: string; path: string | null; icon: string | null; sequences: number; subMenus: Menu[] }
 type MenuResponse = { role: UserRole; defaultPath: string; menus: Menu[] }
 type Driver = { id: string; fullName: string; email: string; role: UserRole; enabled: boolean; createdAt: string; updatedAt: string }
 type School = {
@@ -35,9 +35,9 @@ async function api<T>(path: string, token: string, options: RequestInit = {}): P
 }
 
 function App() {
-  const [token, setToken] = useState(localStorage.getItem('accessToken') || '')
+  const [token, setToken] = useState(sessionStorage.getItem('accessToken') || '')
   const [user, setUser] = useState<LoginUser | null>(() => {
-    try { return JSON.parse(localStorage.getItem('currentUser') || 'null') as LoginUser | null } catch { return null }
+    try { return JSON.parse(sessionStorage.getItem('currentUser') || 'null') as LoginUser | null } catch { return null }
   })
   const [menus, setMenus] = useState<Menu[]>([])
   const [currentPath, setCurrentPath] = useState(window.location.pathname || '/')
@@ -47,11 +47,13 @@ function App() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
 
   const navigate = useCallback((path: string) => {
     if (!path) return
     window.history.pushState({}, '', path)
     setCurrentPath(path)
+    setMobileSidebarOpen(false)
     setError('')
     setNotice('')
   }, [])
@@ -76,8 +78,8 @@ function App() {
   }, [])
 
   function logout() {
-    localStorage.removeItem('accessToken')
-    localStorage.removeItem('currentUser')
+    sessionStorage.removeItem('accessToken')
+    sessionStorage.removeItem('currentUser')
     setToken('')
     setUser(null)
     setMenus([])
@@ -89,14 +91,14 @@ function App() {
     setLoginBusy(true); setError('')
     try {
       const result = await api<LoginResponse>('/auth/login', '', { method: 'POST', body: JSON.stringify({ email: loginEmail.trim(), password: loginPassword }) })
-      localStorage.setItem('accessToken', result.accessToken)
-      localStorage.setItem('currentUser', JSON.stringify(result.user))
+      sessionStorage.setItem('accessToken', result.accessToken)
+      sessionStorage.setItem('currentUser', JSON.stringify(result.user))
       setToken(result.accessToken); setUser(result.user)
       const menuResult = await api<MenuResponse>('/menu/me', result.accessToken)
       setMenus(menuResult.menus || [])
       navigate(menuResult.defaultPath || '/')
     } catch (err) {
-      localStorage.removeItem('accessToken'); localStorage.removeItem('currentUser')
+      sessionStorage.removeItem('accessToken'); sessionStorage.removeItem('currentUser')
       setError(err instanceof Error ? err.message : 'Unable to sign in. Check your credentials.')
     } finally { setLoginBusy(false) }
   }
@@ -108,7 +110,8 @@ function App() {
   }
 
   return (
-    <main className="app-shell">
+    <main className={`app-shell ${mobileSidebarOpen ? 'mobile-open' : ''}`}>
+      <button className="sidebar-backdrop" aria-label="Close navigation" onClick={() => setMobileSidebarOpen(false)} />
       <aside className="sidebar">
         <div className="brand"><span className="brand-mark">SR</span><span>SchoolRoute<small>SCHOOL BUS MANAGEMENT</small></span></div>
         <p className="nav-caption">WORKSPACE</p>
@@ -118,7 +121,8 @@ function App() {
       </aside>
       <section className="workspace">
         <header className="topbar">
-          <div><span className="eyebrow">{user.role.replace('_', ' ')}</span><h1>{activeMenu?.title || pageTitle(currentPath)}</h1></div>
+          <button className="mobile-menu-button" aria-label="Open navigation" onClick={() => setMobileSidebarOpen(true)}>☰</button>
+          <div className="topbar-title"><span className="eyebrow">{user.role.replace('_', ' ')}</span><h1>{activeMenu?.name || pageTitle(currentPath)}</h1></div>
           <div className="topbar-right"><span className="secure-label">● Signed in securely</span><span className="avatar">{initials(user.fullName)}</span></div>
         </header>
         <div className="content">
@@ -155,13 +159,13 @@ function LoginPage({ email, password, setEmail, setPassword, onSubmit, busy, err
 }
 
 function MenuItem({ menu, currentPath, navigate }: { menu: Menu; currentPath: string; navigate: (path: string) => void }) {
-  const hasChildren = menu.children?.length > 0
-  const selected = menu.path === currentPath || menu.children?.some(child => child.path === currentPath)
+  const hasChildren = menu.subMenus?.length > 0
+  const selected = menu.path === currentPath || menu.subMenus?.some(child => child.path === currentPath)
   return <div className="menu-group">
     <button className={`nav-item ${selected ? 'active' : ''} ${hasChildren ? 'parent-menu' : ''}`} onClick={() => menu.path && navigate(menu.path)}>
-      <span className="menu-icon">{iconFor(menu.icon)}</span>{menu.title}{hasChildren && <span className="menu-chevron">⌄</span>}
+      <span className="menu-icon">{iconFor(menu.icon)}</span>{menu.name}{hasChildren && <span className="menu-chevron">⌄</span>}
     </button>
-    {hasChildren && <div className="submenu">{menu.children.map(child => <button key={child.id} className={`submenu-item ${currentPath === child.path ? 'selected' : ''}`} onClick={() => child.path && navigate(child.path)}>{child.title}</button>)}</div>}
+    {hasChildren && <div className="submenu">{menu.subMenus.map(child => <button key={child.id} className={`submenu-item ${currentPath === child.path ? 'selected' : ''}`} onClick={() => child.path && navigate(child.path)}>{child.name}</button>)}</div>}
   </div>
 }
 
@@ -254,7 +258,7 @@ function SchoolPage({ token, setError, setNotice }: { token: string; setError: (
 }
 
 function Detail({ label, value }: { label: string; value: string | null | undefined }) { return <div className="detail"><span>{label}</span><strong>{value || 'Not provided'}</strong></div> }
-function flattenMenus(items: Menu[]): Menu[] { return items.flatMap(item => [item, ...flattenMenus(item.children || [])]) }
+function flattenMenus(items: Menu[]): Menu[] { return items.flatMap(item => [item, ...flattenMenus(item.subMenus || [])]) }
 function pageTitle(path: string) { return path.split('/').filter(Boolean).map(part => part.replace(/-/g, ' ').replace(/^\w/, char => char.toUpperCase())).join(' / ') || 'Dashboard' }
 function initials(name: string) { return name.split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase() }
 function iconFor(icon: string | null) { const icons: Record<string, string> = { 'layout-dashboard': '▦', school: '⌂', 'steering-wheel': '◉', users: '♙', route: '↗', 'map-pinned': '⌖', bell: '♧' }; return icons[icon || ''] || '•' }
