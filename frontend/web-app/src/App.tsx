@@ -578,6 +578,7 @@ function BusesPage({ token, setError, setNotice }: { token: string; setError: (v
   const [busy, setBusy] = useState(false)
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [openActionMenuId, setOpenActionMenuId] = useState<number | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -713,9 +714,10 @@ function BusesPage({ token, setError, setNotice }: { token: string; setError: (v
       </div>
       <div className="table-wrap">
         <table>
-          <thead><tr><th>Bus</th><th>Registration</th><th>Model</th><th>Capacity</th><th>Fuel / Type</th><th>School</th><th>Status</th><th>Actions</th></tr></thead>
+          <thead><tr><th className="row-actions-heading">Actions</th><th>Bus</th><th>Registration</th><th>Model</th><th>Capacity</th><th>Fuel / Type</th><th>School</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody>
             {filteredBuses.map(bus => <tr key={bus.id}>
+              <td className="row-actions-cell"><div className="row-action-menu"><button type="button" className="row-action-trigger" aria-label={`Actions for ${bus.busNumber}`} aria-haspopup="true" aria-expanded={openActionMenuId === bus.id} onClick={() => setOpenActionMenuId(current => current === bus.id ? null : bus.id)}><MoreVertical size={18} /></button>{openActionMenuId === bus.id && <div className="row-action-dropdown" role="menu"><button type="button" role="menuitem" onClick={() => { setOpenActionMenuId(null); editBus(bus) }}>Edit bus</button>{bus.status === 'ACTIVE' && <button type="button" role="menuitem" className="danger" onClick={() => { setOpenActionMenuId(null); void deleteBus(bus) }}>Delete bus</button>}</div>}</div></td>
               <td><strong>{bus.busNumber}</strong></td>
               <td>{bus.registrationNumber}</td>
               <td>{bus.model || '—'}</td>
@@ -723,10 +725,6 @@ function BusesPage({ token, setError, setNotice }: { token: string; setError: (v
               <td>{[bus.fuelType, bus.busType].filter(Boolean).join(' / ') || '—'}</td>
               <td>{schools.find(school => school.id === bus.schoolId)?.name || `School #${bus.schoolId}`}</td>
               <td><span className={`status-pill ${bus.status === 'ACTIVE' ? 'active' : 'inactive'}`}>{bus.status}</span></td>
-              <td className="actions-cell">
-                <button className="table-action" onClick={() => editBus(bus)}>Edit</button>
-                {bus.status === 'ACTIVE' && <button className="table-action danger" onClick={() => void deleteBus(bus)}>Delete</button>}
-              </td>
             </tr>)}
             {loading && <tr><td colSpan={8} className="empty-cell">Loading buses…</td></tr>}
             {!loading && filteredBuses.length === 0 && <tr><td colSpan={8} className="empty-cell">{search ? 'No buses match your search.' : 'No buses found. Add your first bus.'}</td></tr>}
