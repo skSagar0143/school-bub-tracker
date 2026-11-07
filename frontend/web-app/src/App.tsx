@@ -50,7 +50,7 @@ function App() {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
-  const [themeMode, setThemeMode] = useState<ThemeMode>(() => (localStorage.getItem('schoolroute-theme') as ThemeMode) || 'system')
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => (localStorage.getItem('schoolroute-theme') as ThemeMode) || 'dark')
 
   const navigate = useCallback((path: string) => {
     if (!path) return
@@ -233,31 +233,45 @@ function DashboardPage({ user, path, token, menus, navigate }: { user: LoginUser
     </div>
   }
 
-  return <div className="dashboard-page">
-    <section className="dashboard-hero admin-hero">
-      <div className="hero-copy"><span className="hero-kicker"><Activity size={14} /> SCHOOL TRANSPORT OVERVIEW</span><h2>Good to see you, {user.fullName.split(' ')[0]} <span>✦</span></h2><p>Here’s what’s happening with your school transport operations today.</p><div className="hero-date"><CalendarDays size={15} /> {today}</div></div>
-      <div className="hero-illustration"><div className="hero-orbit orbit-one" /><div className="hero-orbit orbit-two" /><div className="hero-bus-icon"><BusFront size={62} strokeWidth={1.4} /></div><span className="hero-spark spark-one">✦</span><span className="hero-spark spark-two">✧</span></div>
-      <div className="hero-school-chip"><Building2 size={16} /><span>{school?.name || 'School profile not configured'}</span><i className={school?.status === 'ACTIVE' ? 'chip-dot active' : 'chip-dot'} /></div>
-    </section>
+  const totalUsers = users.length
+  const rolePercent = (role: UserRole) => totalUsers ? Math.round((countRole(role) / totalUsers) * 100) : 0
+  const enabledPercent = totalUsers ? Math.round((activeUsers / totalUsers) * 100) : 0
 
-    <div className="dashboard-section-heading"><div><span className="section-kicker">LIVE SUMMARY</span><h3>Operations at a glance</h3></div><button className="dashboard-refresh" onClick={() => void loadAdminOverview()} disabled={dataLoading}><RefreshCw size={15} className={dataLoading ? 'spin' : ''} /> Refresh</button></div>
+  return <div className="dashboard-page reference-dashboard">
+    <section className="dashboard-heading-row">
+      <div><span className="section-kicker">SCHOOL TRANSPORT INTELLIGENCE</span><h2>Operations Overview</h2><p>Welcome back, {user.fullName.split(' ')[0]}. Here is your school’s transport snapshot.</p></div>
+      <button className="dashboard-refresh" onClick={() => void loadAdminOverview()} disabled={dataLoading}><RefreshCw size={14} className={dataLoading ? 'spin' : ''} /> Refresh data</button>
+    </section>
     {dataError && <div className="message error">{dataError}</div>}
-    <div className="dashboard-metrics admin-metrics">
-      <article className="metric-card"><div className="metric-icon metric-icon-1"><Building2 size={20} /></div><span>SCHOOL PROFILE</span><strong>{dataLoading ? '…' : schools.length}</strong><small>{school?.status || 'No profile created'}</small></article>
-      <article className="metric-card"><div className="metric-icon metric-icon-2"><Users size={20} /></div><span>TOTAL ACCOUNTS</span><strong>{dataLoading ? '…' : users.length}</strong><small>{activeUsers} enabled accounts</small></article>
-      <article className="metric-card"><div className="metric-icon metric-icon-3"><BusFront size={20} /></div><span>DRIVERS</span><strong>{dataLoading ? '…' : countRole('DRIVER')}</strong><small>{countRole('DRIVER') ? 'Registered driver accounts' : 'No drivers added yet'}</small></article>
-      <article className="metric-card"><div className="metric-icon metric-icon-4"><GraduationCap size={20} /></div><span>STUDENTS</span><strong>{dataLoading ? '…' : countRole('STUDENT')}</strong><small>{countRole('STUDENT') ? 'Registered student accounts' : 'No students added yet'}</small></article>
-      <article className="metric-card"><div className="metric-icon metric-icon-5"><UserRound size={20} /></div><span>PARENTS</span><strong>{dataLoading ? '…' : countRole('PARENT')}</strong><small>{countRole('PARENT') ? 'Registered parent accounts' : 'No parents added yet'}</small></article>
-    </div>
-
-    <section className="dashboard-lower-grid admin-lower-grid">
-      <article className="glass-panel operations-panel"><div className="panel-heading"><div><span className="section-kicker">TRANSPORT CONTROL</span><h3>Transport overview</h3></div><span className="module-status"><i /> MODULES IN PROGRESS</span></div><div className="transport-map"><div className="map-road road-a" /><div className="map-road road-b" /><div className="map-road road-c" /><div className="map-route-line" /><div className="map-pin pin-start"><span /></div><div className="map-pin pin-end"><span /></div><div className="map-center-label"><MapPinned size={21} /><strong>Live bus tracking</strong><small>GPS tracking module not connected yet</small></div></div><div className="transport-footer"><div><span className="footer-dot" /> Tracking service</div><strong>Coming next</strong></div></article>
-      <article className="glass-panel quick-actions-panel"><div className="panel-heading"><div><span className="section-kicker">SHORTCUTS</span><h3>Quick actions</h3></div><ArrowUpRight size={18} /></div><div className="quick-action-list">
-        {quickLinks.length ? quickLinks.map(item => <button className="quick-action" key={item.id} onClick={() => item.path && navigate(item.path)}><span className="quick-action-icon">{iconFor(item.icon)}</span><span><strong>{item.name}</strong><small>Open {item.name.toLowerCase()} module</small></span><ChevronRight size={16} /></button>) : <div className="empty-activity"><strong>No shortcuts available</strong><p>Your role-based menus will appear here.</p></div>}
-      </div></article>
+    <section className="reference-kpis">
+      <article className="reference-card revenue-card"><div className="reference-card-top"><span>School Profile</span><span className="live-indicator"><i /> {school?.status || 'SETUP'}</span></div><strong>{dataLoading ? '…' : schools.length}</strong><small><span className="trend-up">↗</span> {school ? 'School registered' : 'Profile not configured'}</small><div className="sparkline sparkline-blue"><i/><i/><i/><i/><i/><i/><i/><i/><i/><i/><i/><i/></div></article>
+      <article className="reference-card"><div className="reference-card-top"><span>Total Accounts</span><Users size={17}/></div><strong>{dataLoading ? '…' : totalUsers.toLocaleString('en-IN')}</strong><small><span className="trend-up">↗</span> {activeUsers} enabled accounts</small><div className="dot-matrix">{Array.from({length:54},(_,i)=><i key={i}/>)}</div></article>
+      <article className="reference-card"><div className="reference-card-top"><span>Active Accounts</span><Activity size={17}/></div><strong>{dataLoading ? '…' : activeUsers.toLocaleString('en-IN')}</strong><small><span className="trend-up">{enabledPercent}%</span> of registered accounts</small><div className="mini-area"><svg viewBox="0 0 220 68" preserveAspectRatio="none"><path d="M0 55 C25 48 30 8 65 22 S105 58 135 38 S175 8 220 15 L220 68 L0 68Z"/><path d="M0 55 C25 48 30 8 65 22 S105 58 135 38 S175 8 220 15"/></svg></div></article>
+      <article className="reference-card"><div className="reference-card-top"><span>Drivers</span><BusFront size={17}/></div><strong>{dataLoading ? '…' : countRole('DRIVER').toLocaleString('en-IN')}</strong><small><span className="trend-up">↗</span> Registered driver accounts</small><div className="mini-line"><svg viewBox="0 0 220 65" preserveAspectRatio="none"><polyline points="0,12 35,28 70,48 105,44 140,48 180,40 220,20"/></svg></div></article>
     </section>
-    <section className="glass-panel school-status-panel"><div className="school-status-icon"><ShieldCheck size={21} /></div><div><span className="section-kicker">SCHOOL PROFILE</span><h3>{school?.name || 'Complete your school profile'}</h3><p>{school ? [school.city, school.state, school.country].filter(Boolean).join(', ') : 'Add your school details to begin configuring transport operations.'}</p></div><span className={`school-state-pill ${school?.status === 'ACTIVE' ? 'is-active' : ''}`}>{dataLoading ? 'LOADING' : school?.status || 'NOT CONFIGURED'}</span>{!school && <button className="button primary" onClick={() => navigate('/school')}>Set up school <ArrowUpRight size={14} /></button>}</section>
-    <div className="dashboard-bottom-note"><Activity size={14} /> Dashboard figures are loaded from your current School and User APIs. Bus, route, trip and GPS figures will become live as those backend modules are added.</div>
+
+    <section className="reference-main-grid">
+      <article className="reference-panel account-panel"><div className="reference-panel-heading"><div><h3>Account Distribution</h3><p>Registered users by role</p></div><span className="period-chip">All accounts⌄</span></div>
+        <div className="distribution-content"><div className="donut-wrap"><div className="account-donut" style={{background: totalUsers ? `conic-gradient(#6158f5 0% ${rolePercent('DRIVER')}%,#64b8f1 ${rolePercent('DRIVER')}% ${rolePercent('DRIVER')+rolePercent('STUDENT')}%,#61dfbd ${rolePercent('DRIVER')+rolePercent('STUDENT')}% ${rolePercent('DRIVER')+rolePercent('STUDENT')+rolePercent('PARENT')}%,#9b83ff ${rolePercent('DRIVER')+rolePercent('STUDENT')+rolePercent('PARENT')}% 100%)` : 'conic-gradient(#293653 0 100%)'}}><div><strong>{dataLoading ? '…' : totalUsers}</strong><span>Total users</span></div></div></div>
+          <div className="distribution-legend">{([{label:'Drivers',role:'DRIVER',color:'violet'},{label:'Students',role:'STUDENT',color:'blue'},{label:'Parents',role:'PARENT',color:'mint'}] as const).map(item=><div className="legend-row" key={item.role}><span className={`legend-dot ${item.color}`}/><span>{item.label}</span><strong>{dataLoading?'…':countRole(item.role).toLocaleString('en-IN')}</strong><small>{rolePercent(item.role)}%</small></div>)}</div>
+        </div>
+      </article>
+      <article className="reference-panel fleet-panel"><div className="reference-panel-heading"><div><h3>Transport Readiness</h3><p>Live fleet data will appear when bus APIs are connected</p></div><span className="status-outline">IN PROGRESS</span></div>
+        <div className="readiness-visual"><div className="readiness-track"><span className="readiness-fill"/></div><div className="readiness-stages"><div><strong>01</strong><b>School</b><small>{school ? 'Configured' : 'Pending'}</small></div><div><strong>02</strong><b>Drivers</b><small>{countRole('DRIVER')} registered</small></div><div><strong>03</strong><b>Vehicles</b><small>Bus module pending</small></div><div><strong>04</strong><b>Live trips</b><small>GPS module pending</small></div></div></div>
+        <div className="readiness-footer"><span><i/> School setup</span><strong>{school?.status || 'NOT CONFIGURED'}</strong></div>
+      </article>
+    </section>
+
+    <section className="reference-bottom-grid">
+      <article className="reference-panel channels-panel"><div className="reference-panel-heading"><div><h3>School User Accounts</h3><p>Account totals by role</p></div><Users size={17}/></div>
+        <div className="role-bars">{([{label:'Drivers',role:'DRIVER',color:'violet'},{label:'Students',role:'STUDENT',color:'blue'},{label:'Parents',role:'PARENT',color:'mint'}] as const).map(item=><div className="role-bar-row" key={item.role}><span>{item.label}</span><div><i className={item.color} style={{width:`${rolePercent(item.role)}%`}}/></div><strong>{dataLoading?'…':countRole(item.role)}</strong></div>)}</div>
+      </article>
+      <article className="reference-panel events-panel"><div className="reference-panel-heading"><div><h3>Account Status</h3><p>Enabled vs disabled users</p></div><ShieldCheck size={17}/></div><div className="status-bubbles"><div className="status-bubble enabled"><strong>{dataLoading?'…':activeUsers}</strong><span>Enabled</span></div><div className="status-bubble disabled"><strong>{dataLoading?'…':totalUsers-activeUsers}</strong><span>Disabled</span></div></div><div className="status-caption">{enabledPercent}% enabled accounts</div></article>
+      <article className="reference-panel shortcuts-panel"><div className="reference-panel-heading"><div><h3>Quick Actions</h3><p>Jump into a workspace module</p></div><ArrowUpRight size={17}/></div><div className="reference-shortcuts">{quickLinks.slice(0,4).map(item=><button key={item.id} onClick={()=>item.path&&navigate(item.path)}><span>{iconFor(item.icon)}</span><b>{item.name}</b><ChevronRight size={14}/></button>)}{!quickLinks.length&&<small>No menu shortcuts are configured for this role.</small>}</div></article>
+    </section>
+
+    <section className="reference-panel school-profile-row"><div className="profile-icon"><Building2 size={20}/></div><div><span className="section-kicker">SCHOOL PROFILE</span><h3>{school?.name || 'Complete your school profile'}</h3><p>{school ? [school.city,school.state,school.country].filter(Boolean).join(', ') : 'Add school information to begin configuring transport operations.'}</p></div><span className={`profile-status ${school?.status==='ACTIVE'?'active':''}`}>{dataLoading?'LOADING':school?.status||'NOT CONFIGURED'}</span>{!school&&<button className="button primary" onClick={()=>navigate('/school')}>Set up school <ArrowUpRight size={14}/></button>}</section>
+    <p className="reference-disclaimer"><Activity size={13}/> Dashboard numbers come from your School and User APIs. Bus counts, route performance, trip activity and GPS locations will populate when those backend modules are connected.</p>
   </div>
 }
 
