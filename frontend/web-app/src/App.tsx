@@ -161,7 +161,7 @@ function App() {
           {error && <div className="message error">{error}</div>}
           {notice && <div className="message success">{notice}</div>}
           {currentPath === '/school' ? <SchoolPage token={token} setError={setError} setNotice={setNotice} /> :
-            (currentPath === '/students' || currentPath === '/stu') ? <StudentsPage token={token} setError={setError} setNotice={setNotice} /> :
+            (currentPath === '/students' || currentPath === '/students/add' || currentPath === '/stu') ? <StudentsPage key={currentPath} initialAdd={currentPath === '/students/add'} token={token} setError={setError} setNotice={setNotice} /> :
             currentPath === '/drivers' ? <DriversPage token={token} setError={setError} setNotice={setNotice} /> :
             currentPath === '/drivers/dashboard' ? <DriversDashboard token={token} /> :
             <DashboardPage user={user} path={currentPath} token={token} menus={menus} navigate={navigate} />}
@@ -193,11 +193,15 @@ function LoginPage({ email, password, setEmail, setPassword, onSubmit, busy, err
 function MenuItem({ menu, currentPath, navigate }: { menu: Menu; currentPath: string; navigate: (path: string) => void }) {
   const hasChildren = menu.subMenus?.length > 0
   const selected = menu.path === currentPath || menu.subMenus?.some(child => child.path === currentPath)
+  const [expanded, setExpanded] = useState(selected)
+  useEffect(() => { if (selected) setExpanded(true) }, [selected])
   return <div className="menu-group">
-    <button className={`nav-item ${selected ? 'active' : ''} ${hasChildren ? 'parent-menu' : ''}`} onClick={() => menu.path && navigate(menu.path)}>
-      <span className="menu-icon">{iconFor(menu.icon)}</span>{menu.name}{hasChildren && <span className="menu-chevron">⌄</span>}
+    <button className={`nav-item ${selected ? 'active' : ''} ${hasChildren ? 'parent-menu' : ''}`}
+      onClick={() => hasChildren ? setExpanded(value => !value) : menu.path && navigate(menu.path)}
+      aria-expanded={hasChildren ? expanded : undefined}>
+      <span className="menu-icon">{iconFor(menu.icon)}</span>{menu.name}{hasChildren && <span className="menu-chevron">{expanded ? '⌃' : '⌄'}</span>}
     </button>
-    {hasChildren && <div className="submenu">{menu.subMenus.map(child => <button key={child.id} className={`submenu-item ${currentPath === child.path ? 'selected' : ''}`} onClick={() => child.path && navigate(child.path)}>{child.name}</button>)}</div>}
+    {hasChildren && expanded && <div className="submenu">{menu.subMenus.map(child => <button key={child.id} className={`submenu-item ${currentPath === child.path ? 'selected' : ''}`} onClick={() => child.path && navigate(child.path)}>{child.name}</button>)}</div>}
   </div>
 }
 
@@ -336,11 +340,11 @@ function DriversPage({ token, setError, setNotice }: { token: string; setError: 
   </>
 }
 
-function StudentsPage({ token, setError, setNotice }: { token: string; setError: (value: string) => void; setNotice: (value: string) => void }) {
+function StudentsPage({ initialAdd = false, token, setError, setNotice }: { initialAdd?: boolean; token: string; setError: (value: string) => void; setNotice: (value: string) => void }) {
   const [students, setStudents] = useState<Student[]>([])
   const [form, setForm] = useState<StudentForm>(emptyStudent)
   const [editingId, setEditingId] = useState<number | null>(null)
-  const [showForm, setShowForm] = useState(false)
+  const [showForm, setShowForm] = useState(initialAdd)
   const [busy, setBusy] = useState(false)
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -526,8 +530,17 @@ function SchoolPage({ token, setError, setNotice }: { token: string; setError: (
 function Detail({ label, value }: { label: string; value: string | null | undefined }) { return <div className="detail"><span>{label}</span><strong>{value || 'Not provided'}</strong></div> }
 function withStudentMenu(items: Menu[], role?: UserRole): Menu[] {
   if (role !== 'SCHOOL_ADMIN') return items
-  const hasStudentPage = flattenMenus(items).some(item => item.path === '/students' || item.path === '/stu')
-  return hasStudentPage ? items : [...items, { id: -100, name: 'Students', path: '/students', icon: 'users', sequences: 999, subMenus: [] }]
+  return items.map(menu => {
+    if (menu.name.toLowerCase() !== 'students') return menu
+    return {
+      ...menu,
+      path: null,
+      subMenus: [
+        { id: -241, name: 'All Students', path: '/students', icon: 'users', sequences: 1, subMenus: [] },
+        { id: -242, name: 'Add Student', path: '/students/add', icon: 'user-plus', sequences: 2, subMenus: [] },
+      ],
+    }
+  })
 }
 function flattenMenus(items: Menu[]): Menu[] { return items.flatMap(item => [item, ...flattenMenus(item.subMenus || [])]) }
 function pageTitle(path: string) { return path.split('/').filter(Boolean).map(part => part.replace(/-/g, ' ').replace(/^\w/, char => char.toUpperCase())).join(' / ') || 'Dashboard' }
