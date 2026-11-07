@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
+import { Activity, ArrowUpRight, Bell, BusFront, Building2, CalendarDays, ChevronRight, Clock3, GraduationCap, MapPinned, Monitor, Moon, Plus, RefreshCw, Route, ShieldCheck, Sun, Users, UserRound } from 'lucide-react'
 import './App.css'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/sm'
 
 type UserRole = 'SCHOOL_ADMIN' | 'DRIVER' | 'STUDENT' | 'PARENT'
+type ThemeMode = 'system' | 'dark' | 'light'
 type LoginUser = { id: string; fullName: string; email: string; role: UserRole; enabled: boolean }
 type LoginResponse = { tokenType: string; accessToken: string; refreshToken: string; expiresInSeconds: number; user: LoginUser }
 type Menu = { id: number; name: string; path: string | null; icon: string | null; sequences: number; subMenus: Menu[] }
@@ -48,6 +50,7 @@ function App() {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => (localStorage.getItem('schoolroute-theme') as ThemeMode) || 'system')
 
   const navigate = useCallback((path: string) => {
     if (!path) return
@@ -57,6 +60,20 @@ function App() {
     setError('')
     setNotice('')
   }, [])
+
+  useEffect(() => {
+    const root = document.documentElement
+    const applyTheme = () => {
+      const resolved = themeMode === 'system' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : themeMode
+      root.dataset.theme = resolved
+      root.style.colorScheme = resolved
+    }
+    applyTheme()
+    localStorage.setItem('schoolroute-theme', themeMode)
+    const media = window.matchMedia('(prefers-color-scheme: dark)')
+    media.addEventListener('change', applyTheme)
+    return () => media.removeEventListener('change', applyTheme)
+  }, [themeMode])
 
   useEffect(() => {
     const onPopState = () => setCurrentPath(window.location.pathname)
@@ -123,7 +140,7 @@ function App() {
         <header className="topbar">
           <button className="mobile-menu-button" aria-label="Open navigation" onClick={() => setMobileSidebarOpen(true)}>☰</button>
           <div className="topbar-title"><span className="eyebrow">{user.role.replace('_', ' ')}</span><h1>{activeMenu?.name || pageTitle(currentPath)}</h1></div>
-          <div className="topbar-right"><span className="secure-label">● Signed in securely</span><span className="avatar">{initials(user.fullName)}</span></div>
+          <div className="topbar-right"><label className="theme-picker" title="Choose appearance"><span className="theme-picker-icon">{themeMode === 'system' ? <Monitor size={16} /> : themeMode === 'dark' ? <Moon size={16} /> : <Sun size={16} />}</span><select aria-label="Appearance mode" value={themeMode} onChange={event => setThemeMode(event.target.value as ThemeMode)}><option value="system">System</option><option value="dark">Dark</option><option value="light">Light</option></select></label><span className="secure-label"><ShieldCheck size={14} /> Signed in</span><span className="avatar">{initials(user.fullName)}</span></div>
         </header>
         <div className="content">
           {loading && <div className="loading">Loading your workspace…</div>}
@@ -132,7 +149,7 @@ function App() {
           {currentPath === '/school' ? <SchoolPage token={token} setError={setError} setNotice={setNotice} /> :
             currentPath === '/drivers' ? <DriversPage token={token} setError={setError} setNotice={setNotice} /> :
             currentPath === '/drivers/dashboard' ? <DriversDashboard token={token} /> :
-            <DashboardPage user={user} path={currentPath} />}
+            <DashboardPage user={user} path={currentPath} token={token} menus={menus} navigate={navigate} />}
         </div>
       </section>
     </main>
@@ -169,11 +186,79 @@ function MenuItem({ menu, currentPath, navigate }: { menu: Menu; currentPath: st
   </div>
 }
 
-function DashboardPage({ user, path }: { user: LoginUser; path: string }) {
-  return <><div className="page-intro"><div><h2>{path === '/dashboard' ? 'School overview' : pageTitle(path)}</h2><p>Welcome, {user.fullName}. Your role-specific workspace is ready.</p></div><span className="status-pill active">CONNECTED</span></div>
-    <div className="stats-grid"><div className="stat-card"><span>YOUR ROLE</span><strong>{user.role.replace('_', ' ')}</strong><small>Access managed by SchoolRoute</small></div><div className="stat-card"><span>ACCOUNT STATUS</span><strong>Active</strong><small>You are signed in</small></div><div className="stat-card"><span>WORKSPACE</span><strong>SchoolRoute</strong><small>School bus operations</small></div></div>
-    <section className="panel welcome-panel"><span className="section-kicker">GET STARTED</span><h3>Welcome to your dashboard</h3><p>Use the navigation menu to open the modules available to your account. The menu is controlled by your role and delivered by the backend.</p></section>
-  </>
+function DashboardPage({ user, path, token, menus, navigate }: { user: LoginUser; path: string; token: string; menus: Menu[]; navigate: (path: string) => void }) {
+  const [schools, setSchools] = useState<School[]>([])
+  const [users, setUsers] = useState<Driver[]>([])
+  const [dataLoading, setDataLoading] = useState(user.role === 'SCHOOL_ADMIN')
+  const [dataError, setDataError] = useState('')
+  const today = new Intl.DateTimeFormat('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date())
+
+  const loadAdminOverview = useCallback(async () => {
+    if (user.role !== 'SCHOOL_ADMIN') return
+    setDataLoading(true)
+    setDataError('')
+    const [schoolResult, userResult] = await Promise.allSettled([
+      api<School[]>('/school', token),
+      api<Driver[]>('/user', token),
+    ])
+    if (schoolResult.status === 'fulfilled') setSchools(schoolResult.value)
+    else setDataError(schoolResult.reason instanceof Error ? schoolResult.reason.message : 'School information could not be loaded.')
+    if (userResult.status === 'fulfilled') setUsers(userResult.value)
+    else setDataError(userResult.reason instanceof Error ? userResult.reason.message : 'User information could not be loaded.')
+    setDataLoading(false)
+  }, [token, user.role])
+
+  useEffect(() => { void loadAdminOverview() }, [loadAdminOverview])
+
+  const school = schools[0]
+  const countRole = (role: UserRole) => users.filter(item => item.role === role).length
+  const activeUsers = users.filter(item => item.enabled).length
+  const quickLinks = flattenMenus(menus).filter(item => item.path && item.path !== path).slice(0, 4)
+
+  if (user.role !== 'SCHOOL_ADMIN') {
+    const roleContent = {
+      DRIVER: { title: 'Your driving workspace', subtitle: 'Your assigned bus, route and trip controls will appear here when those modules are connected.', cards: [{ label: 'ASSIGNED BUS', value: 'Not assigned', icon: BusFront }, { label: 'TODAY’S ROUTE', value: 'Not available', icon: Route }, { label: 'TRIP STATUS', value: 'Not started', icon: Activity }] },
+      PARENT: { title: 'Your child’s journey', subtitle: 'Track pickup, live bus location and drop-off updates from your parent workspace.', cards: [{ label: 'CHILDREN', value: 'No linked data', icon: GraduationCap }, { label: 'BUS LOCATION', value: 'Awaiting tracking', icon: MapPinned }, { label: 'NOTIFICATIONS', value: 'No new updates', icon: Bell }] },
+      STUDENT: { title: 'Your school journey', subtitle: 'Your bus assignment, pickup and drop-off information will appear here.', cards: [{ label: 'MY BUS', value: 'Not assigned', icon: BusFront }, { label: 'PICKUP STATUS', value: 'Not started', icon: Clock3 }, { label: 'ROUTE', value: 'Not available', icon: Route }] },
+      SCHOOL_ADMIN: { title: 'School overview', subtitle: 'Manage your school transport operations.', cards: [] },
+    }[user.role]
+    return <div className="dashboard-page">
+      <section className="dashboard-hero">
+        <div className="hero-copy"><span className="hero-kicker"><Activity size={14} /> PERSONAL WORKSPACE</span><h2>{roleContent.title}, {user.fullName.split(' ')[0]}</h2><p>{roleContent.subtitle}</p><div className="hero-date"><CalendarDays size={15} /> {today}</div></div>
+        <div className="hero-illustration"><div className="hero-orbit orbit-one" /><div className="hero-orbit orbit-two" /><div className="hero-bus-icon"><BusFront size={58} strokeWidth={1.4} /></div><span className="hero-spark spark-one">✦</span><span className="hero-spark spark-two">✧</span></div>
+      </section>
+      <div className="dashboard-section-heading"><div><span className="section-kicker">AT A GLANCE</span><h3>Your overview</h3></div></div>
+      <div className="dashboard-metrics">{roleContent.cards.map((card, index) => { const Icon = card.icon; return <article className="metric-card" key={card.label}><div className={`metric-icon metric-icon-${index + 1}`}><Icon size={20} /></div><span>{card.label}</span><strong className="metric-placeholder">{card.value}</strong><small>Will update when this module is available</small></article> })}</div>
+      <section className="dashboard-lower-grid"><article className="glass-panel journey-panel"><div className="panel-heading"><div><span className="section-kicker">JOURNEY MONITOR</span><h3>Live journey</h3></div><span className="live-indicator"><i /> LIVE</span></div><div className="map-preview"><div className="map-road road-a" /><div className="map-road road-b" /><div className="map-road road-c" /><div className="map-route-line" /><div className="map-pin pin-start"><span /></div><div className="map-pin pin-end"><span /></div><div className="map-center-label"><MapPinned size={19} /><strong>Live tracking</strong><small>Waiting for bus location service</small></div></div><div className="panel-footnote"><span><Clock3 size={14} /> Tracking will appear when GPS integration is enabled</span><ChevronRight size={16} /></div></article><article className="glass-panel activity-panel"><div className="panel-heading"><div><span className="section-kicker">UPDATES</span><h3>Recent activity</h3></div><Bell size={18} /></div><div className="empty-activity"><div className="empty-activity-icon"><Bell size={21} /></div><strong>You’re all caught up</strong><p>New trip and notification updates will show here.</p></div></article></section>
+    </div>
+  }
+
+  return <div className="dashboard-page">
+    <section className="dashboard-hero admin-hero">
+      <div className="hero-copy"><span className="hero-kicker"><Activity size={14} /> SCHOOL TRANSPORT OVERVIEW</span><h2>Good to see you, {user.fullName.split(' ')[0]} <span>✦</span></h2><p>Here’s what’s happening with your school transport operations today.</p><div className="hero-date"><CalendarDays size={15} /> {today}</div></div>
+      <div className="hero-illustration"><div className="hero-orbit orbit-one" /><div className="hero-orbit orbit-two" /><div className="hero-bus-icon"><BusFront size={62} strokeWidth={1.4} /></div><span className="hero-spark spark-one">✦</span><span className="hero-spark spark-two">✧</span></div>
+      <div className="hero-school-chip"><Building2 size={16} /><span>{school?.name || 'School profile not configured'}</span><i className={school?.status === 'ACTIVE' ? 'chip-dot active' : 'chip-dot'} /></div>
+    </section>
+
+    <div className="dashboard-section-heading"><div><span className="section-kicker">LIVE SUMMARY</span><h3>Operations at a glance</h3></div><button className="dashboard-refresh" onClick={() => void loadAdminOverview()} disabled={dataLoading}><RefreshCw size={15} className={dataLoading ? 'spin' : ''} /> Refresh</button></div>
+    {dataError && <div className="message error">{dataError}</div>}
+    <div className="dashboard-metrics admin-metrics">
+      <article className="metric-card"><div className="metric-icon metric-icon-1"><Building2 size={20} /></div><span>SCHOOL PROFILE</span><strong>{dataLoading ? '…' : schools.length}</strong><small>{school?.status || 'No profile created'}</small></article>
+      <article className="metric-card"><div className="metric-icon metric-icon-2"><Users size={20} /></div><span>TOTAL ACCOUNTS</span><strong>{dataLoading ? '…' : users.length}</strong><small>{activeUsers} enabled accounts</small></article>
+      <article className="metric-card"><div className="metric-icon metric-icon-3"><BusFront size={20} /></div><span>DRIVERS</span><strong>{dataLoading ? '…' : countRole('DRIVER')}</strong><small>{countRole('DRIVER') ? 'Registered driver accounts' : 'No drivers added yet'}</small></article>
+      <article className="metric-card"><div className="metric-icon metric-icon-4"><GraduationCap size={20} /></div><span>STUDENTS</span><strong>{dataLoading ? '…' : countRole('STUDENT')}</strong><small>{countRole('STUDENT') ? 'Registered student accounts' : 'No students added yet'}</small></article>
+      <article className="metric-card"><div className="metric-icon metric-icon-5"><UserRound size={20} /></div><span>PARENTS</span><strong>{dataLoading ? '…' : countRole('PARENT')}</strong><small>{countRole('PARENT') ? 'Registered parent accounts' : 'No parents added yet'}</small></article>
+    </div>
+
+    <section className="dashboard-lower-grid admin-lower-grid">
+      <article className="glass-panel operations-panel"><div className="panel-heading"><div><span className="section-kicker">TRANSPORT CONTROL</span><h3>Transport overview</h3></div><span className="module-status"><i /> MODULES IN PROGRESS</span></div><div className="transport-map"><div className="map-road road-a" /><div className="map-road road-b" /><div className="map-road road-c" /><div className="map-route-line" /><div className="map-pin pin-start"><span /></div><div className="map-pin pin-end"><span /></div><div className="map-center-label"><MapPinned size={21} /><strong>Live bus tracking</strong><small>GPS tracking module not connected yet</small></div></div><div className="transport-footer"><div><span className="footer-dot" /> Tracking service</div><strong>Coming next</strong></div></article>
+      <article className="glass-panel quick-actions-panel"><div className="panel-heading"><div><span className="section-kicker">SHORTCUTS</span><h3>Quick actions</h3></div><ArrowUpRight size={18} /></div><div className="quick-action-list">
+        {quickLinks.length ? quickLinks.map(item => <button className="quick-action" key={item.id} onClick={() => item.path && navigate(item.path)}><span className="quick-action-icon">{iconFor(item.icon)}</span><span><strong>{item.name}</strong><small>Open {item.name.toLowerCase()} module</small></span><ChevronRight size={16} /></button>) : <div className="empty-activity"><strong>No shortcuts available</strong><p>Your role-based menus will appear here.</p></div>}
+      </div></article>
+    </section>
+    <section className="glass-panel school-status-panel"><div className="school-status-icon"><ShieldCheck size={21} /></div><div><span className="section-kicker">SCHOOL PROFILE</span><h3>{school?.name || 'Complete your school profile'}</h3><p>{school ? [school.city, school.state, school.country].filter(Boolean).join(', ') : 'Add your school details to begin configuring transport operations.'}</p></div><span className={`school-state-pill ${school?.status === 'ACTIVE' ? 'is-active' : ''}`}>{dataLoading ? 'LOADING' : school?.status || 'NOT CONFIGURED'}</span>{!school && <button className="button primary" onClick={() => navigate('/school')}>Set up school <ArrowUpRight size={14} /></button>}</section>
+    <div className="dashboard-bottom-note"><Activity size={14} /> Dashboard figures are loaded from your current School and User APIs. Bus, route, trip and GPS figures will become live as those backend modules are added.</div>
+  </div>
 }
 
 function DriversDashboard({ token }: { token: string }) {
