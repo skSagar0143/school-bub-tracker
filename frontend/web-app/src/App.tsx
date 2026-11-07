@@ -489,7 +489,7 @@ function StudentsPage({ token, setError, setNotice }: { token: string; setError:
           <label className="field"><span>First name *</span><TextInput required maxLength={100} value={form.firstName} onChange={e => setForm({ ...form, firstName: e.target.value })} /></label>
           <label className="field"><span>Last name</span><TextInput maxLength={100} value={form.lastName || ''} onChange={e => setForm({ ...form, lastName: e.target.value })} /></label>
           <label className="field"><span>Date of birth</span><DateInput value={form.dateOfBirth || ''} onChange={value => setForm({ ...form, dateOfBirth: value })} /></label>
-          <label className="field"><span>Gender</span><select value={form.gender || ''} onChange={e => setForm({ ...form, gender: e.target.value })}><option value="">Select gender</option><option value="MALE">Male</option><option value="FEMALE">Female</option><option value="OTHER">Other</option></select></label>
+          <label className="field"><span>Gender</span><SelectInput value={form.gender || ''} onChange={e => setForm({ ...form, gender: e.target.value })}><option value="">Select gender</option><option value="MALE">Male</option><option value="FEMALE">Female</option><option value="OTHER">Other</option></SelectInput></label>
           <label className="field"><span>Class *</span><TextInput required maxLength={50} value={form.className} onChange={e => setForm({ ...form, className: e.target.value })} placeholder="e.g. 5" /></label>
           <label className="field"><span>Section</span><TextInput maxLength={20} value={form.section || ''} onChange={e => setForm({ ...form, section: e.target.value })} /></label>
           <label className="field"><span>Roll number</span><TextInput maxLength={30} value={form.rollNumber || ''} onChange={e => setForm({ ...form, rollNumber: e.target.value })} /></label>
@@ -497,7 +497,7 @@ function StudentsPage({ token, setError, setNotice }: { token: string; setError:
           <label className="field"><span>Parent phone *</span><PhoneInput required type="tel" maxLength={15} value={form.parentPhone} onChange={e => setForm({ ...form, parentPhone: e.target.value })} /></label>
           <label className="field"><span>Parent email</span><EmailInput type="email" maxLength={150} value={form.parentEmail || ''} onChange={e => setForm({ ...form, parentEmail: e.target.value })} /></label>
           <label className="field"><span>Emergency contact</span><PhoneInput type="tel" maxLength={15} value={form.emergencyContact || ''} onChange={e => setForm({ ...form, emergencyContact: e.target.value })} /></label>
-          <label className="field field-wide"><span>Address</span><textarea rows={2} maxLength={500} value={form.address || ''} onChange={e => setForm({ ...form, address: e.target.value })} /></label>
+          <label className="field field-wide"><span>Address</span><TextArea rows={2} maxLength={500} value={form.address || ''} onChange={e => setForm({ ...form, address: e.target.value })} /></label>
         </div>
         <div className="form-actions">
           <button type="button" className="button secondary" onClick={() => { setShowForm(false); setEditingId(null) }}>Cancel</button>
@@ -680,17 +680,17 @@ function BusesPage({ token, setError, setNotice }: { token: string; setError: (v
       <form onSubmit={submit}>
         <div className="form-grid">
           <label className="field"><span>School *</span>
-            <select required value={form.schoolId || ''} onChange={e => setForm({ ...form, schoolId: Number(e.target.value) })}>
+            <SelectInput required value={form.schoolId || ''} onChange={e => setForm({ ...form, schoolId: Number(e.target.value) })}>
               <option value="">Select school</option>
               {schools.map(school => <option key={school.id} value={school.id}>{school.name} ({school.code})</option>)}
-            </select>
+            </SelectInput>
           </label>
           <label className="field"><span>Bus number *</span><TextInput required maxLength={50} value={form.busNumber} onChange={e => setForm({ ...form, busNumber: e.target.value })} placeholder="e.g. BUS-001" /></label>
           <label className="field"><span>Registration number *</span><TextInput required maxLength={30} value={form.registrationNumber} onChange={e => setForm({ ...form, registrationNumber: e.target.value.toUpperCase() })} placeholder="e.g. DL01AB1234" /></label>
           <label className="field"><span>Bus model</span><TextInput maxLength={100} value={form.model || ''} onChange={e => setForm({ ...form, model: e.target.value })} placeholder="e.g. Tata Starbus" /></label>
           <label className="field"><span>Seating capacity *</span><NumberInput required type="number" min="1" max="100" value={form.capacity} onChange={e => setForm({ ...form, capacity: Number(e.target.value) })} /></label>
-          <label className="field"><span>Bus type</span><select value={form.busType || ''} onChange={e => setForm({ ...form, busType: e.target.value })}><option value="NON_AC">Non AC</option><option value="AC">AC</option></select></label>
-          <label className="field"><span>Fuel type</span><select value={form.fuelType || ''} onChange={e => setForm({ ...form, fuelType: e.target.value })}><option value="DIESEL">Diesel</option><option value="CNG">CNG</option><option value="ELECTRIC">Electric</option><option value="PETROL">Petrol</option></select></label>
+          <label className="field"><span>Bus type</span><SelectInput value={form.busType || ''} onChange={e => setForm({ ...form, busType: e.target.value })}><option value="NON_AC">Non AC</option><option value="AC">AC</option></SelectInput></label>
+          <label className="field"><span>Fuel type</span><SelectInput value={form.fuelType || ''} onChange={e => setForm({ ...form, fuelType: e.target.value })}><option value="DIESEL">Diesel</option><option value="CNG">CNG</option><option value="ELECTRIC">Electric</option><option value="PETROL">Petrol</option></SelectInput></label>
           <label className="field"><span>Manufacturing year</span><NumberInput type="number" min="1980" max={new Date().getFullYear() + 1} value={form.manufactureYear || ''} onChange={e => setForm({ ...form, manufactureYear: e.target.value ? Number(e.target.value) : null })} /></label>
           <label className="field"><span>Insurance policy number</span><TextInput maxLength={100} value={form.insuranceNumber || ''} onChange={e => setForm({ ...form, insuranceNumber: e.target.value })} /></label>
           <label className="field"><span>Insurance expiry date</span><DateInput value={form.insuranceExpiryDate || ''} onChange={value => setForm({ ...form, insuranceExpiryDate: value })} /></label>
