@@ -47,6 +47,34 @@ const emptyStudent: StudentForm = {
 const emptySchool: SchoolForm = { name: '', code: '', email: '', phone: '', website: '', addressLine1: '', addressLine2: '', city: '', state: '', pincode: '', country: 'India' }
 const emptyDriver: DriverForm = { fullName: '', email: '', password: '' }
 
+function escapeReportCell(value: unknown): string {
+  return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
+function downloadExcelReport(filename: string, title: string, headers: string[], rows: (string | number)[][]) {
+  const table = `<html><head><meta charset="utf-8"></head><body><h2>${escapeReportCell(title)}</h2><table border="1"><thead><tr>${headers.map(header => `<th>${escapeReportCell(header)}</th>`).join('')}</tr></thead><tbody>${rows.map(row => `<tr>${row.map(cell => `<td>${escapeReportCell(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table></body></html>`
+  const blob = new Blob(['\\ufeff', table], { type: 'application/vnd.ms-excel;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename.endsWith('.xls') ? filename : `${filename}.xls`
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
+
+function downloadPdfReport(title: string, headers: string[], rows: (string | number)[][]) {
+  const popup = window.open('', '_blank')
+  if (!popup) {
+    window.alert('Please allow pop-ups to generate the PDF report.')
+    return
+  }
+  const table = `<table><thead><tr>${headers.map(header => `<th>${escapeReportCell(header)}</th>`).join('')}</tr></thead><tbody>${rows.map(row => `<tr>${row.map(cell => `<td>${escapeReportCell(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table>`
+  popup.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${escapeReportCell(title)}</title><style>body{font:12px Arial,sans-serif;padding:24px;color:#111}h1{font-size:20px;margin:0 0 18px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #bbb;padding:7px;text-align:left}th{background:#eee}tr{page-break-inside:avoid}@page{size:landscape;margin:12mm}@media print{body{padding:0}}</style></head><body><h1>${escapeReportCell(title)}</h1><p>Generated: ${new Date().toLocaleString()}</p>${table}<script>window.onload=()=>window.print()</script></body></html>`)
+  popup.document.close()
+}
+
 async function api<T>(path: string, token: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     ...options,
@@ -512,7 +540,11 @@ function StudentsPage({ token, setError, setNotice }: { token: string; setError:
     <section className="panel">
       <div className="panel-heading student-list-heading">
         <div><span className="section-kicker">SCHOOL DIRECTORY</span><h3>All students <small className="count-label">{filteredStudents.length}</small></h3></div>
-        <SearchInput className="student-search" placeholder="Search name, admission no., class…" value={search} onChange={e => setSearch(e.target.value)} />
+        <div className="table-header-tools">
+          <SearchInput className="student-search" placeholder="Search name, admission no., class…" value={search} onChange={e => setSearch(e.target.value)} />
+          <button type="button" className="button secondary report-button" onClick={() => downloadExcelReport('students-report.xls', 'Students Report', ['Student', 'Admission number', 'Class', 'Parent / guardian', 'Parent phone', 'Parent email', 'Date of birth', 'Gender', 'Status'], filteredStudents.map(student => [`${student.firstName} ${student.lastName || ''}`.trim(), student.admissionNumber, `${student.className}${student.section ? ` - ${student.section}` : ''}`, student.parentName, student.parentPhone, student.parentEmail || '', student.dateOfBirth || '', student.gender || '', student.status]))}>Export Excel</button>
+          <button type="button" className="button secondary report-button" onClick={() => downloadPdfReport('Students Report', ['Student', 'Admission number', 'Class', 'Parent / guardian', 'Parent phone', 'Status'], filteredStudents.map(student => [`${student.firstName} ${student.lastName || ''}`.trim(), student.admissionNumber, `${student.className}${student.section ? ` - ${student.section}` : ''}`, student.parentName, student.parentPhone, student.status]))}>Export PDF</button>
+        </div>
       </div>
       <div className="table-wrap"><table>
         <thead><tr><th className="select-column"><input aria-label="Select all active students" type="checkbox" checked={filteredStudents.filter(student => student.status === 'ACTIVE').length > 0 && filteredStudents.filter(student => student.status === 'ACTIVE').every(student => selectedIds.includes(student.id))} onChange={event => { const visibleActiveIds = filteredStudents.filter(student => student.status === 'ACTIVE').map(student => student.id); setSelectedIds(event.target.checked ? Array.from(new Set([...selectedIds, ...visibleActiveIds])) : selectedIds.filter(id => !visibleActiveIds.includes(id))) }} /></th><th className="row-actions-heading">Actions</th><th>Student</th><th>Admission no.</th><th>Class</th><th>Parent / guardian</th><th>Parent phone</th><th>Status</th></tr></thead>
@@ -716,7 +748,11 @@ function BusesPage({ token, setError, setNotice }: { token: string; setError: (v
     <section className="panel">
       <div className="panel-heading student-list-heading">
         <div><span className="section-kicker">SCHOOL FLEET</span><h3>All buses <small className="count-label">{filteredBuses.length}</small></h3></div>
-        <SearchInput className="student-search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search bus number, registration, model…" />
+        <div className="table-header-tools">
+          <SearchInput className="student-search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search bus number, registration, model…" />
+          <button type="button" className="button secondary report-button" onClick={() => downloadExcelReport('buses-report.xls', 'Buses Report', ['Bus number', 'Registration number', 'Model', 'Capacity', 'Fuel type', 'Bus type', 'School', 'Manufacturing year', 'Insurance number', 'Insurance expiry', 'Fitness expiry', 'Status'], filteredBuses.map(bus => [bus.busNumber, bus.registrationNumber, bus.model || '', bus.capacity, bus.fuelType || '', bus.busType || '', schools.find(school => school.id === bus.schoolId)?.name || '', bus.manufactureYear || '', bus.insuranceNumber || '', bus.insuranceExpiryDate || '', bus.fitnessExpiryDate || '', bus.status]))}>Export Excel</button>
+          <button type="button" className="button secondary report-button" onClick={() => downloadPdfReport('Buses Report', ['Bus number', 'Registration number', 'Model', 'Capacity', 'Fuel / type', 'School', 'Status'], filteredBuses.map(bus => [bus.busNumber, bus.registrationNumber, bus.model || '', bus.capacity, [bus.fuelType, bus.busType].filter(Boolean).join(' / '), schools.find(school => school.id === bus.schoolId)?.name || '', bus.status]))}>Export PDF</button>
+        </div>
       </div>
       <div className="table-wrap">
         <table>
