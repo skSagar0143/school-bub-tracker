@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes, ReactNode } from 'react'
-import { CalendarDays, ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
 
 type FieldProps = { label: string; required?: boolean; hint?: string; error?: string; children: ReactNode; className?: string }
 export function FormField({ label, required, hint, error, children, className = '' }: FieldProps) {
@@ -38,7 +38,7 @@ export function DateInput({ value, onChange, ...props }: DateInputProps) {
   const monthLabel = view.toLocaleDateString('en-IN', {month:'long', year:'numeric'})
   const display = value ? new Date(`${value}T12:00:00`).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : ''
   return <div className="date-input-wrap">
-    <button type="button" className="ui-input date-trigger" onClick={() => setOpen(v=>!v)} aria-expanded={open}>
+    <button type="button" className="ui-input date-trigger" onClick={() => setOpen(v=>!v)} aria-expanded={open} aria-required={props.required} disabled={props.disabled} id={props.id}>
       <span className={display ? '' : 'date-placeholder'}>{display || props.placeholder || 'Choose a date'}</span><CalendarDays size={17}/>
     </button>
     {open && <div className="date-popover">
