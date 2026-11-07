@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Activity, ArrowUpRight, Bell, BusFront, Building2, CalendarDays, ChevronRight, Clock3, GraduationCap, MapPinned, Monitor, Moon, RefreshCw, Route, ShieldCheck, Sun, Users, UserRound } from 'lucide-react'
+import { TextInput, NumberInput, EmailInput, PasswordInput, PhoneInput, DateInput, SearchInput } from './components/ui/FormControls'
 import './App.css'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/sm'
@@ -508,7 +509,7 @@ function StudentsPage({ token, setError, setNotice }: { token: string; setError:
     <section className="panel">
       <div className="panel-heading student-list-heading">
         <div><span className="section-kicker">SCHOOL DIRECTORY</span><h3>All students <small className="count-label">{filteredStudents.length}</small></h3></div>
-        <input className="student-search" type="search" placeholder="Search name, admission no., class…" value={search} onChange={e => setSearch(e.target.value)} />
+        <SearchInput className="student-search" placeholder="Search name, admission no., class…" value={search} onChange={e => setSearch(e.target.value)} />
       </div>
       <div className="table-wrap"><table>
         <thead><tr><th><input aria-label="Select all active students" type="checkbox" checked={filteredStudents.filter(student => student.status === 'ACTIVE').length > 0 && filteredStudents.filter(student => student.status === 'ACTIVE').every(student => selectedIds.includes(student.id))} onChange={event => { const visibleActiveIds = filteredStudents.filter(student => student.status === 'ACTIVE').map(student => student.id); setSelectedIds(event.target.checked ? Array.from(new Set([...selectedIds, ...visibleActiveIds])) : selectedIds.filter(id => !visibleActiveIds.includes(id))) }} /></th><th>Student</th><th>Admission no.</th><th>Class</th><th>Parent / guardian</th><th>Parent phone</th><th>Status</th><th>Actions</th></tr></thead>
@@ -706,7 +707,7 @@ function BusesPage({ token, setError, setNotice }: { token: string; setError: (v
     <section className="panel">
       <div className="panel-heading student-list-heading">
         <div><span className="section-kicker">SCHOOL FLEET</span><h3>All buses <small className="count-label">{filteredBuses.length}</small></h3></div>
-        <input className="student-search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search bus number, registration, model…" />
+        <SearchInput className="student-search"{search} onChange={e => setSearch(e.target.value)} placeholder="Search bus number, registration, model…" />
       </div>
       <div className="table-wrap">
         <table>
