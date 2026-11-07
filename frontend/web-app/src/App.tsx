@@ -340,11 +340,11 @@ function DriversPage({ token, setError, setNotice }: { token: string; setError: 
   </>
 }
 
-function StudentsPage({ initialAdd = false, token, setError, setNotice }: { initialAdd?: boolean; token: string; setError: (value: string) => void; setNotice: (value: string) => void }) {
+function StudentsPage({ token, setError, setNotice }: { token: string; setError: (value: string) => void; setNotice: (value: string) => void }) {
   const [students, setStudents] = useState<Student[]>([])
   const [form, setForm] = useState<StudentForm>(emptyStudent)
   const [editingId, setEditingId] = useState<number | null>(null)
-  const [showForm, setShowForm] = useState(initialAdd)
+  const [showForm, setShowForm] = useState(false)
   const [busy, setBusy] = useState(false)
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
