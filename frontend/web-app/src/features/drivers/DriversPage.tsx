@@ -16,6 +16,12 @@ export function DriversPage({ token, setError, setNotice }: { token: string; set
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [openActionMenuId, setOpenActionMenuId] = useState<number | null>(null)
+  const [absenceDriver, setAbsenceDriver] = useState<SchoolDriver | null>(null)
+  const [absenceStartDate, setAbsenceStartDate] = useState('')
+  const [absenceEndDate, setAbsenceEndDate] = useState('')
+  const [absenceReason, setAbsenceReason] = useState('')
+  const [absenceHistory, setAbsenceHistory] = useState<Array<{ id: number; startDate: string; endDate: string; reason: string | null; status: string }>>([])
+  const [absenceBusy, setAbsenceBusy] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -98,6 +104,50 @@ export function DriversPage({ token, setError, setNotice }: { token: string; set
     }
   }
 
+  async function openAbsenceForm(driver: SchoolDriver) {
+    setAbsenceDriver(driver)
+    setAbsenceStartDate('')
+    setAbsenceEndDate('')
+    setAbsenceReason('')
+    try {
+      const rows = await api<Array<{ id: number; startDate: string; endDate: string; reason: string | null; status: string }>>(
+        `/driver-absences/driver/${driver.id}`, token)
+      setAbsenceHistory(rows)
+    } catch (err) {
+      setAbsenceHistory([])
+      setError(err instanceof Error ? err.message : 'Unable to load driver absence history.')
+    }
+  }
+
+  async function submitAbsence(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!absenceDriver) return
+    setAbsenceBusy(true)
+    setError(''); setNotice('')
+    try {
+      await api('/driver-absences/driver/' + absenceDriver.id, token, {
+        method: 'POST',
+        body: JSON.stringify({
+          schoolId: absenceDriver.schoolId,
+          startDate: absenceStartDate,
+          endDate: absenceEndDate,
+          reason: absenceReason.trim() || null,
+        }),
+      })
+      setNotice(`${absenceDriver.firstName} ${absenceDriver.lastName || ''} marked absent for the selected dates.`.trim())
+      const rows = await api<Array<{ id: number; startDate: string; endDate: string; reason: string | null; status: string }>>(
+        `/driver-absences/driver/${absenceDriver.id}`, token)
+      setAbsenceHistory(rows)
+      setAbsenceStartDate('')
+      setAbsenceEndDate('')
+      setAbsenceReason('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to mark driver absent.')
+    } finally {
+      setAbsenceBusy(false)
+    }
+  }
+
   async function deleteDriver(driver: SchoolDriver) {
     if (!window.confirm(`Deactivate driver ${driver.firstName} ${driver.lastName || ''}? Historical transport records will be preserved.`)) return
     setError(''); setNotice('')
@@ -151,6 +201,23 @@ export function DriversPage({ token, setError, setNotice }: { token: string; set
       </form>
     </section>}
 
+    {!showForm && absenceDriver && <section className="panel form-panel">
+      <div className="panel-heading">
+        <div><span className="section-kicker">DRIVER AVAILABILITY</span><h3>Mark {absenceDriver.firstName} {absenceDriver.lastName || ''} absent</h3><p className="student-subtext">This records date-based unavailability. It does not deactivate the driver's account or change permanent bus assignments.</p></div>
+        <button type="button" className="button secondary" onClick={() => setAbsenceDriver(null)}>Close</button>
+      </div>
+      <form onSubmit={submitAbsence}>
+        <div className="form-grid">
+          <label className="field"><span>Absence start date *</span><DateInput required value={absenceStartDate} onChange={setAbsenceStartDate} /></label>
+          <label className="field"><span>Absence end date *</span><DateInput required value={absenceEndDate} onChange={setAbsenceEndDate} /></label>
+          <label className="field field-wide"><span>Reason (optional)</span><TextArea rows={2} maxLength={500} value={absenceReason} onChange={e => setAbsenceReason(e.target.value)} placeholder="e.g. Medical leave, personal work" /></label>
+        </div>
+        <div className="form-actions"><button className="button primary" disabled={absenceBusy || !absenceStartDate || !absenceEndDate || absenceEndDate < absenceStartDate}>{absenceBusy ? 'Saving…' : 'Save absence'}</button></div>
+      </form>
+      <div className="panel-heading"><div><span className="section-kicker">HISTORY</span><h3>Absence records</h3></div></div>
+      {absenceHistory.length ? <div className="table-wrap"><table><thead><tr><th>From</th><th>To</th><th>Reason</th><th>Status</th></tr></thead><tbody>{absenceHistory.map(row => <tr key={row.id}><td>{row.startDate}</td><td>{row.endDate}</td><td>{row.reason || '—'}</td><td><span className="status-pill active">{row.status}</span></td></tr>)}</tbody></table></div> : <p className="empty-cell">No absence records for this driver.</p>}
+    </section>}
+
     {!showForm && <>
       <section className="panel">
         <div className="panel-heading student-list-heading">
@@ -165,7 +232,7 @@ export function DriversPage({ token, setError, setNotice }: { token: string; set
           <thead><tr><th className="row-actions-heading">Actions</th><th>Driver</th><th>Driver code</th><th>Phone</th><th>Driving licence</th><th>Licence expiry</th><th>School</th><th>Status</th></tr></thead>
           <tbody>
             {filteredDrivers.map(driver => <tr key={driver.id}>
-              <td className="row-actions-cell"><div className="row-action-menu"><button type="button" className="row-action-trigger" aria-label={`Actions for ${driver.firstName}`} aria-haspopup="true" aria-expanded={openActionMenuId === driver.id} onClick={() => setOpenActionMenuId(current => current === driver.id ? null : driver.id)}><MoreVertical size={18} /></button>{openActionMenuId === driver.id && <div className="row-action-dropdown" role="menu"><button type="button" role="menuitem" onClick={() => { setOpenActionMenuId(null); editDriver(driver) }}>Edit driver</button>{driver.status === 'ACTIVE' && <button type="button" role="menuitem" className="danger" onClick={() => { setOpenActionMenuId(null); void deleteDriver(driver) }}>Delete driver</button>}</div>}</div></td>
+              <td className="row-actions-cell"><div className="row-action-menu"><button type="button" className="row-action-trigger" aria-label={`Actions for ${driver.firstName}`} aria-haspopup="true" aria-expanded={openActionMenuId === driver.id} onClick={() => setOpenActionMenuId(current => current === driver.id ? null : driver.id)}><MoreVertical size={18} /></button>{openActionMenuId === driver.id && <div className="row-action-dropdown" role="menu"><button type="button" role="menuitem" onClick={() => { setOpenActionMenuId(null); editDriver(driver) }}>Edit driver</button>{driver.status === 'ACTIVE' && <button type="button" role="menuitem" onClick={() => { setOpenActionMenuId(null); void openAbsenceForm(driver) }}>Mark Absent</button>}{driver.status === 'ACTIVE' && <button type="button" role="menuitem" className="danger" onClick={() => { setOpenActionMenuId(null); void deleteDriver(driver) }}>Delete driver</button>}</div>}</div></td>
               <td><strong>{driver.firstName} {driver.lastName}</strong></td>
               <td>{driver.driverCode}</td><td>{driver.phone}</td><td>{driver.licenseNumber}</td>
               <td>{driver.licenseExpiryDate || '—'}</td>
