@@ -5,11 +5,12 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { api, withStudentMenu, flattenMenus, pageTitle } from './pages/LegacyPages'
 import { LoginPage } from './features/auth/LoginPage'
 import { MenuItem } from './components/navigation/MenuItem'
-import type { LoginResponse, LoginUser, Menu, MenuResponse, ThemeMode } from './pages/LegacyPages'
+import type { LoginResponse, LoginUser, Menu, MenuResponse, School, ThemeMode } from './pages/LegacyPages'
 import AppRoutes from './routes/AppRoutes'
 import './App.css'
 
 const menuCacheKey = (user: LoginUser) => `schoolroute-menus:${user.id}:${user.role}`
+const schoolCacheKey = (user: LoginUser) => `schoolroute-school:${user.id}`
 
 type CachedMenuResponse = {
   userId: string
@@ -35,6 +36,27 @@ function readCachedMenus(currentUser: LoginUser): CachedMenuResponse | null {
   }
 }
 
+function readCachedSchool(currentUser: LoginUser): School | null {
+  try {
+    const raw = localStorage.getItem(schoolCacheKey(currentUser))
+    if (!raw) return null
+    const school = JSON.parse(raw) as School
+    if (!school || typeof school.id !== 'number' || typeof school.name !== 'string') return null
+    return school
+  } catch {
+    localStorage.removeItem(schoolCacheKey(currentUser))
+    return null
+  }
+}
+
+function saveCachedSchool(currentUser: LoginUser, schools: School[]) {
+  // This installation currently supports one school.
+  const school = schools[0] || null
+  if (school) localStorage.setItem(schoolCacheKey(currentUser), JSON.stringify(school))
+  else localStorage.removeItem(schoolCacheKey(currentUser))
+  return school
+}
+
 function saveCachedMenus(currentUser: LoginUser, result: MenuResponse) {
   const cached: CachedMenuResponse = {
     userId: currentUser.id,
@@ -52,6 +74,7 @@ function App() {
     try { return JSON.parse(sessionStorage.getItem('currentUser') || 'null') as LoginUser | null } catch { return null }
   })
   const [menus, setMenus] = useState<Menu[]>(() => user ? readCachedMenus(user)?.menus || [] : [])
+  const [school, setSchool] = useState<School | null>(() => user ? readCachedSchool(user) : null)
   const location = useLocation()
   const routerNavigate = useNavigate()
   const currentPath = location.pathname
@@ -92,7 +115,26 @@ function App() {
     if (!token || !user) return
     let active = true
 
-    // Reuse the menu saved at login. A page refresh should not call /menu/me again.
+    // Restore the school profile from localStorage. Fetch only for older sessions
+    // that do not have a cached school profile.
+    if (user.role === 'SCHOOL_ADMIN') {
+      const cachedSchool = readCachedSchool(user)
+      if (cachedSchool) {
+        setSchool(cachedSchool)
+      } else {
+        api<School[]>('/school', token)
+          .then(rows => {
+            if (active) setSchool(saveCachedSchool(user, rows))
+          })
+          .catch(() => {
+            if (active) setSchool(null)
+          })
+      }
+    } else {
+      setSchool(null)
+    }
+
+    // Reuse cached menus after refresh; do not call /menu/me on page navigation.
     const cached = readCachedMenus(user)
     if (cached) {
       setMenus(cached.menus)
@@ -103,7 +145,6 @@ function App() {
       return () => { active = false }
     }
 
-    // Fetch only when this user's menu is not cached (for example, an older session).
     setLoading(true)
     api<MenuResponse>('/menu/me', token)
       .then(result => {
@@ -123,13 +164,17 @@ function App() {
   }, [])
 
   function logout() {
-    if (user) localStorage.removeItem(menuCacheKey(user))
+    if (user) {
+      localStorage.removeItem(menuCacheKey(user))
+      localStorage.removeItem(schoolCacheKey(user))
+    }
     sessionStorage.removeItem('accessToken')
     sessionStorage.removeItem('currentUser')
     setToken('')
     setUser(null)
     setUserMenuOpen(false)
     setMenus([])
+    setSchool(null)
     navigate('/login')
   }
 
@@ -144,6 +189,19 @@ function App() {
       const menuResult = await api<MenuResponse>('/menu/me', result.accessToken)
       const savedMenus = saveCachedMenus(result.user, menuResult)
       setMenus(savedMenus.menus)
+
+      // Fetch the school profile once at login and cache it for later visits.
+      if (result.user.role === 'SCHOOL_ADMIN') {
+        try {
+          const schoolRows = await api<School[]>('/school', result.accessToken)
+          setSchool(saveCachedSchool(result.user, schoolRows))
+        } catch {
+          setSchool(null)
+        }
+      } else {
+        setSchool(null)
+      }
+
       navigate(savedMenus.defaultPath || '/')
     } catch (err) {
       sessionStorage.removeItem('accessToken'); sessionStorage.removeItem('currentUser')
@@ -161,7 +219,7 @@ function App() {
     <main className={`app-shell ${mobileSidebarOpen ? 'mobile-open' : ''}`}>
       <button className="sidebar-backdrop" aria-label="Close navigation" onClick={() => setMobileSidebarOpen(false)} />
       <aside className="sidebar">
-        <div className="brand"><span className="brand-mark">SR</span><span>SchoolRoute<small>SCHOOL BUS MANAGEMENT</small></span></div>
+        <div className="brand"><span className="brand-mark">{school?.name?.slice(0, 2).toUpperCase() || 'SR'}</span><span className="school-brand-name" title={school?.name || 'SchoolRoute'}>{school?.name || 'SchoolRoute'}<small>SCHOOL BUS MANAGEMENT</small></span></div>
         <p className="nav-caption">WORKSPACE</p>
         <nav className="menu-tree">{menus.map(menu => <MenuItem key={menu.id} menu={menu} currentPath={currentPath} navigate={navigate} />)}</nav>
         <div className="sidebar-note"><span className="note-dot" /> Secure role-based access</div>
