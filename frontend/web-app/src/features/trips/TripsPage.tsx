@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { BusFront, CalendarClock, CheckCircle2, MoreVertical, RefreshCw, Route as RouteIcon } from 'lucide-react'
+import { BusFront, CalendarClock, MoreVertical, RefreshCw, Route as RouteIcon } from 'lucide-react'
 import { DateInput, SearchInput } from '../../components/ui/FormControls'
 import { api, downloadExcelReport, downloadPdfReport } from '../../pages/LegacyPages'
 import type { Bus, BusAssignment, School, SchoolDriver, SchoolRoute } from '../../pages/LegacyPages'
@@ -34,7 +34,6 @@ const today = () => {
 export function TripsPage({ token, setError, setNotice }: Props) {
   const [trips, setTrips] = useState<Trip[]>([])
   const [schools, setSchools] = useState<School[]>([])
-  const [assignments, setAssignments] = useState<BusAssignment[]>([])
   const [buses, setBuses] = useState<Bus[]>([])
   const [routes, setRoutes] = useState<SchoolRoute[]>([])
   const [drivers, setDrivers] = useState<SchoolDriver[]>([])
@@ -65,7 +64,6 @@ export function TripsPage({ token, setError, setNotice }: Props) {
       if (!resolvedSchoolId) throw new Error('Unable to determine the school for this account.')
       const tripRows = await api<Trip[]>(`/api/trips/school/${resolvedSchoolId}?date=${tripDate}`, token)
       setSchools(schoolRows)
-      setAssignments(assignmentRows.filter(item => item.schoolId === resolvedSchoolId))
       setBuses(busRows.filter(item => item.schoolId === resolvedSchoolId))
       setRoutes(routeRows.filter(item => item.schoolId === resolvedSchoolId))
       setDrivers(driverRows.filter(item => item.schoolId === resolvedSchoolId))
