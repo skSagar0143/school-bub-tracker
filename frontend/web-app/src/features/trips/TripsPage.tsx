@@ -95,6 +95,32 @@ export function TripsPage({ token, setError, setNotice }: Props) {
     item.tripType, item.status, item.tripDate, item.scheduledStartTime,
   ].join(' ').toLowerCase().includes(search.toLowerCase())), [trips, buses, routes, drivers, search])
   const selectedTrip = trips.find(item => item.id === selectedTripId) || null
+  const [clockNow, setClockNow] = useState(Date.now())
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setClockNow(Date.now()), 30000)
+    return () => window.clearInterval(timer)
+  }, [])
+
+  const getTripProgress = (trip: Trip) => {
+    const completedStopCount = trip.stops.filter(stop => ['DEPARTED', 'SKIPPED'].includes(stop.status)).length
+    const completedStudentCount = trip.students.filter(student =>
+      ['PICKUP'.includes(trip.tripType) ? 'BOARDED' : 'DROPPED', 'ABSENT'].includes(student.status),
+    ).length
+    const currentStop = trip.stops.find(stop => stop.status === 'ARRIVED') || null
+    const nextStop = trip.stops.find(stop => stop.status === 'PENDING') || null
+    const startedAt = trip.actualStartAt ? new Date(trip.actualStartAt).getTime() : null
+    const endedAt = trip.actualEndAt ? new Date(trip.actualEndAt).getTime() : null
+    const elapsedMinutes = startedAt ? Math.max(0, Math.floor(((endedAt || clockNow) - startedAt) / 60000)) : 0
+    const hours = Math.floor(elapsedMinutes / 60)
+    const minutes = elapsedMinutes % 60
+    const progress = trip.stops.length ? Math.round(completedStopCount / trip.stops.length * 100) : 0
+    return {
+      completedStopCount, remainingStops: Math.max(0, trip.stops.length - completedStopCount),
+      completedStudentCount, remainingStudents: Math.max(0, trip.students.length - completedStudentCount),
+      currentStop, nextStop, elapsed: hours ? `${hours}h ${minutes}m` : `${minutes}m`, progress,
+    }
+  }
 
   const canOperateStop = (trip: Trip, stop: TripStop) => {
     if (trip.status === 'COMPLETED' || trip.status === 'CANCELLED') return false
@@ -248,6 +274,27 @@ export function TripsPage({ token, setError, setNotice }: Props) {
         <div><span className="section-kicker">TRIP DETAILS</span><h3>{busLabel(selectedTrip.busId)} · {selectedTrip.tripType === 'PICKUP' ? 'Morning pickup' : 'Afternoon drop'}</h3><p>{routeLabel(selectedTrip.routeId)} · {selectedTrip.tripDate} · {driverLabel(selectedTrip.driverId)}</p></div>
         <button type="button" className="button secondary" onClick={() => setSelectedTripId(null)}>Close details</button>
       </div>
+      {(() => {
+        const progress = getTripProgress(selectedTrip)
+        return <div className="trip-progress-panel">
+          <div className="trip-progress-heading">
+            <div><span className="section-kicker">LIVE JOURNEY</span><h4>Trip progress</h4></div>
+            <strong>{progress.progress}%</strong>
+          </div>
+          <div className="trip-progress-track"><span style={{ width: `${progress.progress}%` }} /></div>
+          <div className="trip-progress-metrics">
+            <div><strong>{progress.completedStopCount}/{selectedTrip.stops.length}</strong><span>Stops completed</span></div>
+            <div><strong>{progress.remainingStops}</strong><span>Stops remaining</span></div>
+            <div><strong>{progress.completedStudentCount}/{selectedTrip.students.length}</strong><span>Students processed</span></div>
+            <div><strong>{progress.remainingStudents}</strong><span>Students waiting</span></div>
+            <div><strong>{progress.elapsed}</strong><span>Elapsed time</span></div>
+          </div>
+          <div className="trip-progress-route">
+            <div><span>Current stop</span><strong>{progress.currentStop?.stopName || (selectedTrip.status === 'SCHEDULED' ? 'Not started' : 'Between stops')}</strong></div>
+            <div><span>Next stop</span><strong>{progress.nextStop?.stopName || (progress.remainingStops === 0 ? 'All stops completed' : 'No pending stop')}</strong></div>
+          </div>
+        </div>
+      })()}
       {(() => {
         const readiness = getTripReadiness(selectedTrip)
         return <div className={`trip-readiness ${readiness.ready ? 'is-ready' : 'has-issues'}`}>
