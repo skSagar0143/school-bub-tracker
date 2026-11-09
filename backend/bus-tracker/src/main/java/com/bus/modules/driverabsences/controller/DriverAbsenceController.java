@@ -31,7 +31,8 @@ public class DriverAbsenceController {
     public ResponseEntity<DriverAbsenceEntity> markAbsent(
             @PathVariable Long driverId, @RequestBody MarkAbsenceRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(absenceService.markAbsent(
-            driverId, request.getSchoolId(), request.getStartDate(), request.getEndDate(), request.getReason()));
+            driverId, request.getSchoolId(), request.getStartDate(), request.getEndDate(), request.getReason(),
+            request.getReplacementDriverId()));
     }
 
     @GetMapping("/driver/{driverId}")
@@ -47,5 +48,6 @@ public class DriverAbsenceController {
         private LocalDate startDate;
         private LocalDate endDate;
         private String reason;
+        private Long replacementDriverId;
     }
 }
