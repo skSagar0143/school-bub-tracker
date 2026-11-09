@@ -139,8 +139,8 @@ public class StudentTransportAssignmentServiceImpl implements StudentTransportAs
                 .filter(item -> item.getSchoolId().equals(studentAssignment.getSchoolId()))
                 .filter(item -> item.getRouteId().equals(studentAssignment.getRouteId()))
                 .filter(item -> !item.getStartDate().isAfter(studentAssignment.getStartDate()))
-                .filter(item -> item.getEndDate() == null || studentAssignment.getEndDate() == null
-                        || !item.getEndDate().isBefore(studentAssignment.getEndDate()))
+                .filter(item -> item.getEndDate() == null || (studentAssignment.getEndDate() != null
+                        && !item.getEndDate().isBefore(studentAssignment.getEndDate())))
                 .filter(item -> busAssignmentStopRepository.existsByBusAssignmentIdAndRouteStopId(
                         item.getId(), homeStop.getId()))
                 .filter(item -> busAssignmentStopRepository.existsByBusAssignmentIdAndRouteStopId(
