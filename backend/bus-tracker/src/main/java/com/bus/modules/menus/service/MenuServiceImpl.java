@@ -37,7 +37,7 @@ public class MenuServiceImpl implements MenuService {
 	private MenusFor mapRole(UserRole role) {
 
 		return switch (role) {
-		case SCHOOL_ADMIN -> MenusFor.ADMIN;
+		case SCHOOL_ADMIN -> MenusFor.SCHOOL_ADMIN;
 		case DRIVER -> MenusFor.DRIVERS;
 		case STUDENT -> MenusFor.STUDENTS;
 		case PARENT -> MenusFor.PARENTS;
