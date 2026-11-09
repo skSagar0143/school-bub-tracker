@@ -2,6 +2,7 @@ package com.bus.modules.drivers.entity;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -29,6 +30,9 @@ public class DriversEntity {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
+
+	@Column(name = "user_id", unique = true)
+	private UUID userId;
 
 	@Column(name = "school_id", nullable = false)
 	private Long schoolId;
