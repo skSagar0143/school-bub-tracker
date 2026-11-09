@@ -491,3 +491,13 @@ html[data-theme="dark"] .table-subtext{color:#9eacc5}
 html[data-theme="dark"] .app-toast-success{background:#12382d;border-color:#176b50;color:#a7f3d0}
 html[data-theme="dark"] .app-toast-error{background:#421f2b;border-color:#87364b;color:#fecdd3}
 @media(max-width:600px){.app-toast{top:12px;right:12px;width:calc(100vw - 24px);padding:13px}}
+
+
+/* Direct month and year selection in the shared calendar */
+.date-calendar-head{gap:7px}
+.date-calendar-selectors{display:flex;align-items:center;justify-content:center;gap:5px;min-width:0;flex:1}
+.date-calendar-selectors select{min-width:0;border:1px solid var(--field-border,#dce3ed);border-radius:7px;padding:6px 5px;background:var(--field-bg,#fff);color:var(--field-text,#23344c);font:600 11px 'DM Sans',sans-serif;outline:none;cursor:pointer}
+.date-calendar-selectors select:first-child{flex:1}
+.date-calendar-selectors select:last-child{width:78px}
+.date-calendar-selectors select:focus{border-color:#4389d7;box-shadow:0 0 0 2px rgba(67,137,215,.14)}
+html[data-theme="dark"] .date-calendar-selectors select{background:#101e35;border-color:rgba(135,165,215,.28);color:#e8efff}
