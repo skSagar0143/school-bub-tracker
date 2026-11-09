@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { UserRole, LoginUser, Menu, Driver, School, Bus } from '../../pages/LegacyPages'
-import { flattenMenus, iconFor } from '../../pages/LegacyPages'
+import { api, flattenMenus, iconFor } from '../../pages/LegacyPages'
 import { Activity, ArrowUpRight, Bell, BusFront, Building2, CalendarDays, ChevronRight, Clock3, GraduationCap, MapPinned, RefreshCw, Route, ShieldCheck, Users } from 'lucide-react'
 
 export function DashboardPage({ user, path, token, menus, navigate }: { user: LoginUser; path: string; token: string; menus: Menu[]; navigate: (path: string) => void }) {
