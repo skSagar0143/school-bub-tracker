@@ -1,6 +1,8 @@
 package com.bus.modules.drivers.repository;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -19,4 +21,6 @@ public interface DriversRepository extends JpaRepository<DriversEntity, Long> {
 	List<DriversEntity> findByStatus(String status);
 
 	List<DriversEntity> findBySchoolIdAndStatus(Long schoolId, String status);
+
+	Optional<DriversEntity> findByUserId(UUID userId);
 }
