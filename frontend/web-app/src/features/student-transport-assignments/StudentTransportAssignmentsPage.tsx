@@ -23,18 +23,47 @@ export function StudentTransportAssignmentsPage({ token, setError, setNotice }: 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [assignmentRows, studentRows, routeRows, stopRows, schoolRows] = await Promise.all([
+      const results = await Promise.allSettled([
         api<StudentTransportAssignment[]>('/student-transport-assignment', token),
         api<Student[]>('/stu', token),
         api<SchoolRoute[]>('/route', token),
         api<RouteStop[]>('/route-stop', token),
-        api<School[]>('/school', token).catch(() => [] as School[]),
-      ])
-      setAssignments(assignmentRows); setStudents(studentRows); setRoutes(routeRows); setStops(stopRows); setSchools(schoolRows)
-      setForm(current => current.schoolId || !schoolRows.length ? current : { ...current, schoolId: schoolRows[0].id })
+        api<School[]>('/school', token),
+      ] as const)
+
+      const [assignmentResult, studentResult, routeResult, stopResult, schoolResult] = results
+      const failures: string[] = []
+      if (assignmentResult.status === 'fulfilled') setAssignments(assignmentResult.value)
+      else failures.push('assignments')
+      if (studentResult.status === 'fulfilled') setStudents(studentResult.value.filter(student => student.status === 'ACTIVE'))
+      else failures.push('students')
+      if (routeResult.status === 'fulfilled') setRoutes(routeResult.value)
+      else failures.push('routes')
+      if (stopResult.status === 'fulfilled') setStops(stopResult.value)
+      else failures.push('route stops')
+      if (schoolResult.status === 'fulfilled') {
+        setSchools(schoolResult.value)
+        setForm(current => current.schoolId || !schoolResult.value.length ? current : { ...current, schoolId: schoolResult.value[0].id })
+      } else failures.push('schools')
+
+      if (failures.length) setError(`Unable to load ${failures.join(', ')}. Use Refresh after checking the backend.`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to load student transport assignments.')
     } finally { setLoading(false) }
+  }, [token, setError])
+
+  const refreshStudents = useCallback(async (schoolId: number) => {
+    if (!schoolId) {
+      setStudents([])
+      return
+    }
+    try {
+      const rows = await api<Student[]>(`/stu/school/${schoolId}`, token)
+      setStudents(rows.filter(student => student.status === 'ACTIVE'))
+      setError('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to refresh students for the selected school.')
+    }
   }, [token, setError])
   useEffect(() => { void load() }, [load])
 
@@ -67,8 +96,10 @@ export function StudentTransportAssignmentsPage({ token, setError, setNotice }: 
 
   function createForm() {
     setEditingId(null)
-    setForm({ ...emptyStudentTransportAssignment, schoolId: schools[0]?.id || 0 })
+    const schoolId = form.schoolId || schools[0]?.id || 0
+    setForm({ ...emptyStudentTransportAssignment, schoolId })
     setShowForm(true)
+    if (schoolId) void refreshStudents(schoolId)
   }
   function edit(item: StudentTransportAssignment) {
     setEditingId(item.id)
@@ -125,8 +156,8 @@ export function StudentTransportAssignmentsPage({ token, setError, setNotice }: 
     {!showForm && <div className="page-intro"><div><h2>Student transport assignment</h2><p>Set the student's home and school stops. The morning journey runs Home → School and the afternoon journey automatically runs School → Home.</p></div><div className="page-header-actions"><button className="button primary" onClick={createForm}><Users size={15}/> Assign Student</button><button className="button secondary" onClick={() => void load()} disabled={loading}><RefreshCw size={14}/> Refresh</button></div></div>}
     {showForm && <div className="record-page-header"><button type="button" className="breadcrumb-back" onClick={() => { setShowForm(false); setEditingId(null) }}>Student Transport Assignments</button><span>/</span><strong>{editingId ? 'Update assignment' : 'Assign student'}</strong></div>}
     {showForm && <section className="panel form-panel"><form onSubmit={submit}><div className="form-grid">
-      <label className="field"><span>School *</span><SelectInput required value={form.schoolId || ''} onChange={e => setForm({ ...form, schoolId: Number(e.target.value), studentId: 0, routeId: 0, pickupStopId: 0, dropStopId: 0 })}><option value="">Select school</option>{schools.filter(x => x.status === 'ACTIVE').map(x => <option key={x.id} value={x.id}>{x.name} ({x.code})</option>)}</SelectInput></label>
-      <label className="field"><span>Student *</span><SelectInput required value={form.studentId || ''} onChange={e => setForm({ ...form, studentId: Number(e.target.value) })}><option value="">Select active student</option>{availableStudents.map(x => <option key={x.id} value={x.id}>{x.firstName} {x.lastName || ''} · {x.admissionNumber} · {x.className}</option>)}</SelectInput></label>
+      <label className="field"><span>School *</span><SelectInput required value={form.schoolId || ''} onChange={e => { const schoolId = Number(e.target.value); setForm(current => ({ ...current, schoolId, studentId: 0, routeId: 0, pickupStopId: 0, dropStopId: 0 })); void refreshStudents(schoolId) }}><option value="">Select school</option>{schools.filter(x => x.status === 'ACTIVE').map(x => <option key={x.id} value={x.id}>{x.name} ({x.code})</option>)}</SelectInput></label>
+      <label className="field"><span>Student *</span><div className="field-inline"><SelectInput required value={form.studentId || ''} onChange={e => setForm({ ...form, studentId: Number(e.target.value) })}><option value="">Select active student</option>{availableStudents.map(x => <option key={x.id} value={x.id}>{x.firstName} {x.lastName || ''} · {x.admissionNumber} · {x.className}</option>)}</SelectInput><button type="button" className="button secondary" onClick={() => void refreshStudents(Number(form.schoolId))} disabled={!form.schoolId}><RefreshCw size={14}/> Refresh students</button></div></label>
       <label className="field"><span>Route *</span><SelectInput required value={form.routeId || ''} onChange={e => setForm({ ...form, routeId: Number(e.target.value), pickupStopId: 0, dropStopId: 0 })}><option value="">Select active route</option>{availableRoutes.map(x => <option key={x.id} value={x.id}>{x.routeName} ({x.routeCode})</option>)}</SelectInput></label>
       <label className="field"><span>Morning pickup service *</span><SelectInput required value={form.requiresPickup ? 'true' : 'false'} onChange={e => setForm({ ...form, requiresPickup: e.target.value === 'true' })}><option value="true">Required</option><option value="false">Not required</option></SelectInput></label>
       <label className="field"><span>Afternoon drop service *</span><SelectInput required value={form.requiresDrop ? 'true' : 'false'} onChange={e => setForm({ ...form, requiresDrop: e.target.value === 'true' })}><option value="true">Required</option><option value="false">Not required</option></SelectInput></label>
