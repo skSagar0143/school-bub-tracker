@@ -83,7 +83,7 @@ public class TripServiceImpl implements TripService {
         for (TripScheduleEntity schedule : schedules) {
             if (!isScheduleOperating(schedule, date, day)) continue;
 
-            if (tripRepository.existsByTripScheduleIdAndTripDate(schedule.getId(), date)) {
+            if (tripRepository.existsByBusAssignmentIdAndTripDateAndTripType(\n                    schedule.getBusAssignmentId(), date, schedule.getTripType())) {
                 continue;
             }
 
@@ -280,6 +280,12 @@ public class TripServiceImpl implements TripService {
         }
         if ("COMPLETED".equals(next)) {
             if (!"IN_PROGRESS".equals(current)) throw new IllegalArgumentException("Only an in-progress trip can be completed.");
+            boolean unfinishedStops = tripStopRepository.findByTripIdOrderByStopOrderAsc(tripId).stream()
+                    .anyMatch(stop -> Set.of("PENDING", "ARRIVED").contains(stop.getStatus()));
+            if (unfinishedStops) throw new IllegalArgumentException("Complete or skip every trip stop before completing the trip.");
+            boolean unfinishedStudents = tripStudentRepository.findByTripIdOrderByStopNameAscStudentNameAsc(tripId).stream()
+                    .anyMatch(student -> "WAITING".equals(student.getStatus()));
+            if (unfinishedStudents) throw new IllegalArgumentException("Update every student's boarding or drop status before completing the trip.");
             trip.setActualEndAt(LocalDateTime.now());
         }
         trip.setStatus(next);
