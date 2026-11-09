@@ -2,6 +2,7 @@ package com.bus.modules.driverabsences.repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -26,4 +27,7 @@ public interface DriverAbsenceRepository extends JpaRepository<DriverAbsenceEnti
     );
 
     List<DriverAbsenceEntity> findByDriverIdOrderByStartDateDesc(Long driverId);
+
+    Optional<DriverAbsenceEntity> findFirstBySchoolIdAndDriverIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+        Long schoolId, Long driverId, String status, LocalDate tripDate, LocalDate tripDateAgain);
 }
