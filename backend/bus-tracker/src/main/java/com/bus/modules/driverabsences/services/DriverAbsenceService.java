@@ -7,7 +7,7 @@ import com.bus.modules.driverabsences.entity.DriverAbsenceEntity;
 public interface DriverAbsenceService {
 
     DriverAbsenceEntity markAbsent(Long driverId, Long schoolId, java.time.LocalDate startDate,
-                                   java.time.LocalDate endDate, String reason);
+                                   java.time.LocalDate endDate, String reason, Long replacementDriverId);
 
     List<DriverAbsenceEntity> getDriverAbsences(Long driverId);
 }
