@@ -1,7 +1,7 @@
 import type { FormEvent } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CalendarClock, MoreVertical, RefreshCw } from 'lucide-react'
-import { DateInput, SearchInput, SelectInput, TextArea, TextInput } from '../../components/ui/FormControls'
+import { DateInput, SearchInput, SelectInput, TextArea, TimeInput } from '../../components/ui/FormControls'
 import {
   api,
   downloadExcelReport,
@@ -307,7 +307,7 @@ export function TripSchedulesPage({ token, setError, setNotice }: Props) {
           </label>
           <label className="field">
             <span>Start time *</span>
-            <TextInput required type="time" value={form.startTime} onChange={event => setForm({ ...form, startTime: event.target.value })} />
+            <TimeInput required value={form.startTime} onChange={value => setForm({ ...form, startTime: value })} />
           </label>
           <label className="field">
             <span>Effective from *</span>
