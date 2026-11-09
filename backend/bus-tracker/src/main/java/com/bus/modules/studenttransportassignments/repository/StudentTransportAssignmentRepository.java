@@ -14,6 +14,19 @@ public interface StudentTransportAssignmentRepository
 
     List<StudentTransportAssignmentEntity> findByStatusOrderByStartDateDesc(String status);
 
+    @Query("""
+            SELECT a
+            FROM StudentTransportAssignmentEntity a
+            WHERE a.schoolId = :schoolId
+              AND a.status = 'ACTIVE'
+              AND a.startDate <= :tripDate
+              AND (a.endDate IS NULL OR a.endDate >= :tripDate)
+            ORDER BY a.startDate DESC
+            """)
+    List<StudentTransportAssignmentEntity> findActiveForTripGeneration(
+            @Param("schoolId") Long schoolId,
+            @Param("tripDate") LocalDate tripDate);
+
     List<StudentTransportAssignmentEntity> findByStudentIdOrderByStartDateDesc(Long studentId);
 
     List<StudentTransportAssignmentEntity> findByRouteIdOrderByStartDateDesc(Long routeId);
