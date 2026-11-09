@@ -146,17 +146,31 @@ public class StudentTransportAssignmentServiceImpl implements StudentTransportAs
                 .filter(item -> busAssignmentStopRepository.existsByBusAssignmentIdAndRouteStopId(
                         item.getId(), schoolStop.getId()))
                 .filter(item -> requestedId == null || item.getId().equals(requestedId))
-                .filter(item -> hasCapacity(item, studentAssignment, morning, excludeId))
-                .sorted(Comparator.comparingLong(item -> occupancy(item.getId(), studentAssignment, morning, excludeId)))
+                .sorted(Comparator.comparingLong(
+                        item -> occupancy(item.getId(), studentAssignment, morning, excludeId)))
                 .toList();
 
-        if (candidates.isEmpty()) {
-            throw new IllegalArgumentException(requestedId == null
-                    ? "No bus serving both selected stops has available capacity for the "
-                            + (morning ? "morning pickup" : "afternoon drop")
-                    : "Selected bus does not serve both stops or has no available capacity");
+        // Lock each candidate before checking occupancy. Concurrent requests for the
+        // same bus assignment wait here, then see the latest committed occupancy.
+        for (BusAssignmentEntity candidate : candidates) {
+            BusAssignmentEntity locked = busAssignmentRepository.findByIdForUpdate(candidate.getId())
+                    .filter(item -> "ACTIVE".equals(item.getStatus()))
+                    .orElse(null);
+            if (locked == null) {
+                continue;
+            }
+            if (hasCapacity(locked, studentAssignment, morning, excludeId)) {
+                return locked.getId();
+            }
+            if (requestedId != null) {
+                throw new IllegalArgumentException("Selected bus assignment has no available capacity");
+            }
         }
-        return candidates.get(0).getId();
+
+        throw new IllegalArgumentException(requestedId == null
+                ? "No bus serving both selected stops has available capacity for the "
+                        + (morning ? "morning pickup" : "afternoon drop")
+                : "Selected bus does not serve both stops or has no available capacity");
     }
 
     private boolean hasCapacity(BusAssignmentEntity assignment, StudentTransportAssignmentEntity studentAssignment,
