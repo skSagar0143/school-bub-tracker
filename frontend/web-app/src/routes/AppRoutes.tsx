@@ -1,10 +1,16 @@
 import { Route, Routes } from 'react-router-dom'
 import type { LoginUser, Menu } from '../pages/LegacyPages'
-import {
-  SchoolPage, StudentsPage, BusesPage, DriversPage, RoutesPage, RouteStopsPage,
-  BusAssignmentsPage, DriverAssignmentsPage, StudentTransportAssignmentsPage,
-  DriversDashboard, DashboardPage,
-} from '../pages/LegacyPages'
+import { SchoolPage } from '../features/school/SchoolPage'
+import { StudentsPage } from '../features/students/StudentsPage'
+import { BusesPage } from '../features/buses/BusesPage'
+import { DriversPage } from '../features/drivers/DriversPage'
+import { DriversDashboard } from '../features/drivers/DriversDashboard'
+import { RoutesPage } from '../features/routes/RoutesPage'
+import { RouteStopsPage } from '../features/route-stops/RouteStopsPage'
+import { BusAssignmentsPage } from '../features/bus-assignments/BusAssignmentsPage'
+import { DriverAssignmentsPage } from '../features/driver-assignments/DriverAssignmentsPage'
+import { StudentTransportAssignmentsPage } from '../features/student-transport-assignments/StudentTransportAssignmentsPage'
+import { DashboardPage } from '../features/dashboard/DashboardPage'
 
 type Props = {
   token: string
