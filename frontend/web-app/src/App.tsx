@@ -69,6 +69,7 @@ function App() {
     sessionStorage.removeItem('currentUser')
     setToken('')
     setUser(null)
+    setUserMenuOpen(false)
     setMenus([])
     navigate('/login')
   }
@@ -80,7 +81,7 @@ function App() {
       const result = await api<LoginResponse>('/auth/login', '', { method: 'POST', body: JSON.stringify({ email: loginEmail.trim(), password: loginPassword }) })
       sessionStorage.setItem('accessToken', result.accessToken)
       sessionStorage.setItem('currentUser', JSON.stringify(result.user))
-      setToken(result.accessToken); setUser(result.user)
+      setToken(result.accessToken); setUser(result.user); setUserMenuOpen(false)
       const menuResult = await api<MenuResponse>('/menu/me', result.accessToken)
       setMenus(withStudentMenu(menuResult.menus || [], result.user.role))
       navigate(menuResult.defaultPath || '/')
