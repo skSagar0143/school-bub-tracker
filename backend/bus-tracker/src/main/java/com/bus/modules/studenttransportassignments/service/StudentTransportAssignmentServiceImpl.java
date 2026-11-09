@@ -93,18 +93,22 @@ public class StudentTransportAssignmentServiceImpl implements StudentTransportAs
         if (!"ACTIVE".equals(pickupStop.getStatus()) || !"ACTIVE".equals(dropStop.getStatus())) {
             throw new IllegalArgumentException("Only active route stops can be selected");
         }
-        if (!Boolean.TRUE.equals(pickupStop.getPickupAllowed())) {
-            throw new IllegalArgumentException("Pickup is not allowed at the selected pickup stop");
+        // pickupStopId represents the student's HOME stop.
+        // dropStopId represents the SCHOOL stop.
+        // Both stops must support both operations because the afternoon trip reverses
+        // the morning journey: Home -> School in the morning, School -> Home in the afternoon.
+        if (!Boolean.TRUE.equals(pickupStop.getPickupAllowed())
+                || !Boolean.TRUE.equals(pickupStop.getDropAllowed())) {
+            throw new IllegalArgumentException("The home stop must allow both pickup and drop-off");
         }
-        if (!Boolean.TRUE.equals(dropStop.getDropAllowed())) {
-            throw new IllegalArgumentException("Drop is not allowed at the selected drop stop");
+        if (!Boolean.TRUE.equals(dropStop.getPickupAllowed())
+                || !Boolean.TRUE.equals(dropStop.getDropAllowed())) {
+            throw new IllegalArgumentException("The school stop must allow both pickup and drop-off");
         }
         if (pickupStop.getId().equals(dropStop.getId())) {
             throw new IllegalArgumentException("Pickup and drop stops must be different");
         }
-        if (pickupStop.getStopOrder() >= dropStop.getStopOrder()) {
-            throw new IllegalArgumentException("Pickup stop must come before drop stop on the selected route");
-        }
+        // Do not enforce stop order here: the afternoon journey runs in reverse.
 
         if (assignmentRepository.existsOverlappingActiveAssignment(
                 assignment.getStudentId(), assignment.getStartDate(), assignment.getEndDate(), excludeId)) {
