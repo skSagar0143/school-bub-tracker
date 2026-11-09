@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes, ReactNode } from 'react'
 import { CalendarDays, ChevronLeft, ChevronRight, Clock3, ChevronDown } from 'lucide-react'
 
@@ -32,6 +32,22 @@ type TimeInputProps = {
 }
 export function TimeInput({ value, onChange, required, disabled, id, placeholder = 'Select time' }: TimeInputProps) {
   const [open, setOpen] = useState(false)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const handlePointerDown = (event: PointerEvent) => {
+      if (event.target instanceof Node && !wrapperRef.current?.contains(event.target)) setOpen(false)
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [open])
   const [parsedHour, parsedMinute] = value.split(':').map(Number)
   const hour24 = Number.isFinite(parsedHour) ? parsedHour : 7
   const minuteValue = Number.isFinite(parsedMinute) ? parsedMinute : 0
@@ -43,7 +59,7 @@ export function TimeInput({ value, onChange, required, disabled, id, placeholder
     onChange(`${String(normalizedHour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`)
   }
 
-  return <div className="time-input-wrap">
+  return <div className="time-input-wrap" ref={wrapperRef}>
     <button
       type="button"
       id={id}
@@ -78,6 +94,22 @@ const pad = (value: number) => String(value).padStart(2, '0')
 const toIso = (date: Date) => `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`
 export function DateInput({ value, onChange, ...props }: DateInputProps) {
   const [open, setOpen] = useState(false)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const handlePointerDown = (event: PointerEvent) => {
+      if (event.target instanceof Node && !wrapperRef.current?.contains(event.target)) setOpen(false)
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [open])
   const [view, setView] = useState(() => value ? new Date(`${value}T12:00:00`) : new Date())
   useEffect(() => { if (value) setView(new Date(`${value}T12:00:00`)) }, [value])
   const first = new Date(view.getFullYear(), view.getMonth(), 1)
@@ -90,7 +122,7 @@ export function DateInput({ value, onChange, ...props }: DateInputProps) {
   const currentYear = new Date().getFullYear()
   const years = Array.from({ length: Math.max(141, currentYear + 21 - Math.min(1900, view.getFullYear())) }, (_, index) => Math.min(1900, view.getFullYear()) + index)
   const display = value ? new Date(`${value}T12:00:00`).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : ''
-  return <div className="date-input-wrap">
+  return <div className="date-input-wrap" ref={wrapperRef}>
     <button type="button" className="ui-input date-trigger" onClick={() => setOpen(v=>!v)} aria-expanded={open} aria-required={props.required} disabled={props.disabled} id={props.id}>
       <span className={display ? '' : 'date-placeholder'}>{display || props.placeholder || 'Choose a date'}</span><CalendarDays size={17}/>
     </button>
