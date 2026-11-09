@@ -1,7 +1,7 @@
 import type { FormEvent } from 'react'
 import { EmailInput, PasswordInput } from '../../components/ui/FormControls'
 
-export function LoginPage({ email, password, setEmail, setPassword, onSubmit, busy, error }: {
+export function LoginPage({ email, password, setEmail, setPassword, onSubmit, busy }: {
   email: string; password: string; setEmail: (value: string) => void; setPassword: (value: string) => void
   onSubmit: (event: FormEvent<HTMLFormElement>) => void; busy: boolean
 }) {
