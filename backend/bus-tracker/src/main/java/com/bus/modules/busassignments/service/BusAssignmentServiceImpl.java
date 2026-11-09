@@ -74,10 +74,8 @@ public class BusAssignmentServiceImpl implements BusAssignmentService {
                 assignment.getBusId(), assignment.getStartDate(), assignment.getEndDate(), excludeId)) {
             throw new IllegalArgumentException("This bus already has an overlapping active route assignment");
         }
-        if (assignmentRepository.existsOverlappingActiveAssignmentForRoute(
-                assignment.getRouteId(), assignment.getStartDate(), assignment.getEndDate(), excludeId)) {
-            throw new IllegalArgumentException("This route already has an overlapping active bus assignment");
-        }
+        // Multiple buses may serve the same route during overlapping dates.
+        // Only overlapping assignments for the same bus are prohibited.
     }
 
     @Override
