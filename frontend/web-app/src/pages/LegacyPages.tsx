@@ -54,13 +54,14 @@ export type DriverAssignment = {
 export type DriverAssignmentForm = Omit<DriverAssignment, 'id' | 'status' | 'createdAt' | 'updatedAt'>
 export type StudentTransportAssignment = {
   id: number; schoolId: number; studentId: number; routeId: number; pickupStopId: number; dropStopId: number
+  morningBusAssignmentId: number | null; afternoonBusAssignmentId: number | null
   requiresPickup: boolean; requiresDrop: boolean
   startDate: string; endDate: string | null; status: 'ACTIVE' | 'INACTIVE'; remarks: string | null
   createdAt: string; updatedAt: string
 }
 export type StudentTransportAssignmentForm = Omit<StudentTransportAssignment, 'id' | 'status' | 'createdAt' | 'updatedAt'>
 export const emptyStudentTransportAssignment: StudentTransportAssignmentForm = {
-  schoolId: 0, studentId: 0, routeId: 0, pickupStopId: 0, dropStopId: 0, requiresPickup: true, requiresDrop: true, startDate: '', endDate: '', remarks: '',
+  schoolId: 0, studentId: 0, routeId: 0, pickupStopId: 0, dropStopId: 0, morningBusAssignmentId: null, afternoonBusAssignmentId: null, requiresPickup: true, requiresDrop: true, startDate: '', endDate: '', remarks: '',
 }
 export const emptyBusAssignment: BusAssignmentForm = { schoolId: 0, busId: 0, routeId: 0, startDate: '', endDate: '', remarks: '' }
 export const emptyDriverAssignment: DriverAssignmentForm = { schoolId: 0, busId: 0, driverId: 0, startDate: '', endDate: '', remarks: '' }
