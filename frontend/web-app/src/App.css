@@ -479,18 +479,23 @@ html[data-theme="dark"] .table-subtext{color:#9eacc5}
 @media(max-width:650px){.compact-field{width:100%}.compact-field input{width:100%}.trip-detail-panel .panel-heading{align-items:flex-start}}
 
 
-/* Global success and error toast notifications */
-.app-toast{position:fixed;z-index:3000;top:22px;right:24px;width:min(440px,calc(100vw - 32px));display:flex;align-items:flex-start;gap:12px;padding:15px 16px;border:1px solid;border-radius:12px;box-shadow:0 14px 40px #10182826;font-size:13px;font-weight:600;line-height:1.5;animation:toast-enter .2s ease-out}
-.app-toast>svg{flex:none;margin-top:1px}
-.app-toast>span{flex:1;overflow-wrap:anywhere}
-.app-toast-success{background:#ecfdf5;border-color:#a7f3d0;color:#047857}
-.app-toast-error{background:#fff1f2;border-color:#fecdd3;color:#be123c}
-.app-toast-close{flex:none;border:0;background:transparent;color:inherit;opacity:.72;padding:0;display:grid;place-items:center}
-.app-toast-close:hover{opacity:1}
-@keyframes toast-enter{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
-html[data-theme="dark"] .app-toast-success{background:#12382d;border-color:#176b50;color:#a7f3d0}
-html[data-theme="dark"] .app-toast-error{background:#421f2b;border-color:#87364b;color:#fecdd3}
-@media(max-width:600px){.app-toast{top:12px;right:12px;width:calc(100vw - 24px);padding:13px}}
+/* Compact toast notifications with a visible countdown timer */
+.app-toast{position:fixed;z-index:3000;top:22px;right:24px;width:min(390px,calc(100vw - 32px));overflow:hidden;border:1px solid var(--toast-border);border-radius:13px;background:var(--toast-bg);color:var(--toast-text);box-shadow:0 16px 42px rgba(10,24,45,.2);animation:toast-enter .22s cubic-bezier(.2,.8,.2,1);backdrop-filter:blur(14px)}
+.app-toast-content{display:flex;align-items:center;gap:11px;padding:14px 14px 13px}
+.app-toast-icon{width:32px;height:32px;display:grid;place-items:center;flex:none;border-radius:10px;background:var(--toast-icon-bg);color:var(--toast-accent)}
+.app-toast-message{flex:1;min-width:0;overflow-wrap:anywhere;font-size:12px;font-weight:600;line-height:1.5}
+.app-toast-close{width:27px;height:27px;flex:none;display:grid;place-items:center;border:0;border-radius:7px;background:transparent;color:var(--toast-muted);opacity:.8;padding:0}
+.app-toast-close:hover{opacity:1;background:var(--toast-icon-bg);color:var(--toast-text)}
+.app-toast-timer{height:3px;background:var(--toast-track)}
+.app-toast-timer span{display:block;width:100%;height:100%;background:var(--toast-accent);transform-origin:left;animation:toast-countdown linear forwards}
+.app-toast-success{--toast-bg:#ffffff;--toast-border:#dceee5;--toast-text:#203b30;--toast-accent:#16a36a;--toast-icon-bg:#e8f7ef;--toast-muted:#6c8a7b;--toast-track:#eaf4ee}
+.app-toast-error{--toast-bg:#ffffff;--toast-border:#f2dada;--toast-text:#492b30;--toast-accent:#df4b58;--toast-icon-bg:#fff0f0;--toast-muted:#9a7378;--toast-track:#f9e9e9}
+@keyframes toast-enter{from{opacity:0;transform:translate3d(0,-10px,0) scale(.98)}to{opacity:1;transform:translate3d(0,0,0) scale(1)}}
+@keyframes toast-countdown{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+html[data-theme="dark"] .app-toast{--toast-bg:#15243a;--toast-text:#edf4ff;box-shadow:0 16px 42px rgba(0,0,0,.38)}
+html[data-theme="dark"] .app-toast-success{--toast-border:#285743;--toast-icon-bg:#1d3b32;--toast-muted:#9ab9aa;--toast-track:#263d37}
+html[data-theme="dark"] .app-toast-error{--toast-border:#68404a;--toast-icon-bg:#442a35;--toast-muted:#c49aa2;--toast-track:#422e38}
+@media(max-width:600px){.app-toast{top:12px;right:12px;width:calc(100vw - 24px)}.app-toast-content{padding:12px}}
 
 
 /* Direct month and year selection in the shared calendar */
