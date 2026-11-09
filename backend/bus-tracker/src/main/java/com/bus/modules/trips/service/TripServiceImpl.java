@@ -22,6 +22,10 @@ import com.bus.modules.busassignmentstops.entity.BusAssignmentStopEntity;
 import com.bus.modules.busassignmentstops.repository.BusAssignmentStopRepository;
 import com.bus.modules.driverassignments.entity.DriverAssignmentEntity;
 import com.bus.modules.driverassignments.repository.DriverAssignmentRepository;
+import com.bus.modules.drivers.entity.DriversEntity;
+import com.bus.modules.drivers.repository.DriversRepository;
+import com.bus.modules.routes.entity.RoutesEntity;
+import com.bus.modules.routes.repository.RouteRepository;
 import com.bus.modules.routestops.entity.RouteStopsEntity;
 import com.bus.modules.routestops.repository.RouteStopsRepository;
 import com.bus.modules.school.repository.SchoolRepository;
@@ -62,6 +66,8 @@ public class TripServiceImpl implements TripService {
     private final StudentTransportAssignmentRepository transportAssignmentRepository;
     private final StudentsRepository studentsRepository;
     private final DriverAssignmentRepository driverAssignmentRepository;
+    private final DriversRepository driversRepository;
+    private final RouteRepository routeRepository;
     private final BusRepository busRepository;
     private final SchoolRepository schoolRepository;
 
@@ -283,8 +289,11 @@ public class TripServiceImpl implements TripService {
         if (!allowed && !current.equals(next)) {
             throw new IllegalArgumentException("Trip cannot move from " + current + " to " + next + ".");
         }
-        if ("IN_PROGRESS".equals(next) && trip.getActualStartAt() == null) {
-            trip.setActualStartAt(LocalDateTime.now());
+        if ("IN_PROGRESS".equals(next) && "SCHEDULED".equals(current)) {
+            validateTripReadyToStart(trip);
+            if (trip.getActualStartAt() == null) {
+                trip.setActualStartAt(LocalDateTime.now());
+            }
         }
         if ("COMPLETED".equals(next)) {
             if (!"IN_PROGRESS".equals(current)) throw new IllegalArgumentException("Only an in-progress trip can be completed.");
@@ -318,6 +327,7 @@ public class TripServiceImpl implements TripService {
         if ("ARRIVED".equals(next) && stop.getArrivedAt() == null) {
             stop.setArrivedAt(LocalDateTime.now());
             if ("SCHEDULED".equals(trip.getStatus())) {
+                validateTripReadyToStart(trip);
                 trip.setStatus("IN_PROGRESS");
                 trip.setActualStartAt(LocalDateTime.now());
                 tripRepository.save(trip);
@@ -350,6 +360,75 @@ public class TripServiceImpl implements TripService {
         if (request.remarks() != null) student.setRemarks(request.remarks().trim());
         tripStudentRepository.save(student);
         return toResponse(trip);
+    }
+
+    /**
+     * Server-side guard for every path that can start a trip.
+     * Never rely on frontend readiness checks for operational safety.
+     */
+    private void validateTripReadyToStart(TripEntity trip) {
+        BusAssignmentEntity assignment = busAssignmentRepository.findById(trip.getBusAssignmentId())
+                .filter(item -> "ACTIVE".equalsIgnoreCase(item.getStatus()))
+                .filter(item -> item.getSchoolId().equals(trip.getSchoolId()))
+                .filter(item -> item.getBusId().equals(trip.getBusId()))
+                .filter(item -> item.getRouteId().equals(trip.getRouteId()))
+                .filter(item -> !item.getStartDate().isAfter(trip.getTripDate()))
+                .filter(item -> item.getEndDate() == null || !item.getEndDate().isBefore(trip.getTripDate()))
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Trip cannot start: its bus assignment is missing, inactive, or outside its effective dates."));
+
+        BusEntity bus = busRepository.findById(trip.getBusId())
+                .filter(item -> item.getSchoolId().equals(trip.getSchoolId()))
+                .filter(item -> "ACTIVE".equalsIgnoreCase(item.getStatus()))
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Trip cannot start: the assigned bus is missing or inactive."));
+
+        RoutesEntity route = routeRepository.findById(trip.getRouteId())
+                .filter(item -> item.getSchoolId().equals(trip.getSchoolId()))
+                .filter(item -> "ACTIVE".equalsIgnoreCase(item.getStatus()))
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Trip cannot start: the assigned route is missing or inactive."));
+
+        if (trip.getDriverAssignmentId() == null || trip.getDriverId() == null) {
+            throw new IllegalArgumentException("Trip cannot start: assign an active driver to this bus first.");
+        }
+
+        DriverAssignmentEntity driverAssignment = driverAssignmentRepository.findById(trip.getDriverAssignmentId())
+                .filter(item -> "ACTIVE".equalsIgnoreCase(item.getStatus()))
+                .filter(item -> item.getSchoolId().equals(trip.getSchoolId()))
+                .filter(item -> item.getBusId().equals(bus.getId()))
+                .filter(item -> item.getDriverId().equals(trip.getDriverId()))
+                .filter(item -> !item.getStartDate().isAfter(trip.getTripDate()))
+                .filter(item -> item.getEndDate() == null || !item.getEndDate().isBefore(trip.getTripDate()))
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Trip cannot start: the driver assignment is missing, inactive, or not valid for this trip date."));
+
+        DriversEntity driver = driversRepository.findById(driverAssignment.getDriverId())
+                .filter(item -> item.getSchoolId().equals(trip.getSchoolId()))
+                .filter(item -> "ACTIVE".equalsIgnoreCase(item.getStatus()))
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Trip cannot start: the assigned driver is missing or inactive."));
+
+        List<TripStopEntity> stops = tripStopRepository.findByTripIdOrderByStopOrderAsc(trip.getId());
+        if (stops.isEmpty()) {
+            throw new IllegalArgumentException("Trip cannot start: configure at least one stop for this trip.");
+        }
+
+        List<TripStudentEntity> students =
+                tripStudentRepository.findByTripIdOrderByStopNameAscStudentNameAsc(trip.getId());
+        if (students.isEmpty()) {
+            throw new IllegalArgumentException("Trip cannot start: no students are assigned to this trip.");
+        }
+
+        Set<Long> tripStopIds = stops.stream().map(TripStopEntity::getId).collect(Collectors.toSet());
+        boolean studentHasInvalidStop = students.stream().anyMatch(student -> !tripStopIds.contains(student.getStopId()));
+        if (studentHasInvalidStop) {
+            throw new IllegalArgumentException("Trip cannot start: every assigned student must be linked to a stop on this trip.");
+        }
+
+        if (bus.getCapacity() == null || students.size() > bus.getCapacity()) {
+            throw new IllegalArgumentException("Trip cannot start: assigned students exceed the bus capacity.");
+        }
     }
 
     private TripEntity getTripEntity(Long id) {
