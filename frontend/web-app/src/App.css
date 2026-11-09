@@ -477,3 +477,17 @@ html[data-theme="dark"] .status-pill.pending{color:#f4d27e;background:#4a3c20}
 html[data-theme="dark"] .table-subtext{color:#9eacc5}
 @media(min-width:1050px){.trip-detail-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
 @media(max-width:650px){.compact-field{width:100%}.compact-field input{width:100%}.trip-detail-panel .panel-heading{align-items:flex-start}}
+
+
+/* Global success and error toast notifications */
+.app-toast{position:fixed;z-index:3000;top:22px;right:24px;width:min(440px,calc(100vw - 32px));display:flex;align-items:flex-start;gap:12px;padding:15px 16px;border:1px solid;border-radius:12px;box-shadow:0 14px 40px #10182826;font-size:13px;font-weight:600;line-height:1.5;animation:toast-enter .2s ease-out}
+.app-toast>svg{flex:none;margin-top:1px}
+.app-toast>span{flex:1;overflow-wrap:anywhere}
+.app-toast-success{background:#ecfdf5;border-color:#a7f3d0;color:#047857}
+.app-toast-error{background:#fff1f2;border-color:#fecdd3;color:#be123c}
+.app-toast-close{flex:none;border:0;background:transparent;color:inherit;opacity:.72;padding:0;display:grid;place-items:center}
+.app-toast-close:hover{opacity:1}
+@keyframes toast-enter{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+html[data-theme="dark"] .app-toast-success{background:#12382d;border-color:#176b50;color:#a7f3d0}
+html[data-theme="dark"] .app-toast-error{background:#421f2b;border-color:#87364b;color:#fecdd3}
+@media(max-width:600px){.app-toast{top:12px;right:12px;width:calc(100vw - 24px);padding:13px}}
