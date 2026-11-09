@@ -446,3 +446,11 @@ html[data-theme="dark"] .nav-item:hover,html[data-theme="dark"] .nav-item.active
 html[data-theme="dark"] .user-menu-dropdown{background:#152440;border-color:#405779;color:#edf3ff}
 html[data-theme="dark"] .user-menu-profile{border-color:#405779}
 @media(max-width:760px){.sidebar .nav-item,.sidebar .nav-item:not(.active){padding:8px 10px;font-size:12px}.sidebar .submenu-item{padding:7px 9px;font-size:11px}.sidebar .sidebar-footer{display:none}}
+
+
+/* Trip schedule weekday selector */
+.weekday-options{display:flex;flex-wrap:wrap;gap:9px;padding:5px 0}
+.weekday-option{display:inline-flex!important;align-items:center;gap:7px;padding:9px 11px;border:1px solid var(--border-soft,#dce3ed);border-radius:9px;background:var(--surface,#fff);cursor:pointer}
+.weekday-option input{width:15px;height:15px;margin:0;accent-color:#3987df}
+.weekday-option span{display:inline!important;margin:0!important;color:var(--text-main,#273950)!important;font-size:11px!important;font-weight:600}
+html[data-theme="dark"] .weekday-option{background:#101a31;border-color:#33415f}
