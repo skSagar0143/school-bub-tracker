@@ -39,6 +39,12 @@ public class StudentTransportAssignmentEntity {
     @Column(name = "route_id", nullable = false)
     private Long routeId;
 
+    @Column(name = "morning_bus_assignment_id")
+    private Long morningBusAssignmentId;
+
+    @Column(name = "afternoon_bus_assignment_id")
+    private Long afternoonBusAssignmentId;
+
     @Column(name = "requires_pickup", nullable = false, columnDefinition = "BOOLEAN DEFAULT TRUE")
     private Boolean requiresPickup = true;
 
