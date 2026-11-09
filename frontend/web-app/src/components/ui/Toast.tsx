@@ -8,21 +8,33 @@ export type ToastMessage = {
 }
 
 export function Toast({ toast, onClose }: { toast: ToastMessage | null; onClose: () => void }) {
+  const duration = toast?.type === 'error' ? 6000 : 4000
+
   useEffect(() => {
     if (!toast) return
-    const timeout = window.setTimeout(onClose, toast.type === 'error' ? 6000 : 4000)
+    const timeout = window.setTimeout(onClose, duration)
     return () => window.clearTimeout(timeout)
-  }, [toast, onClose])
+  }, [toast, onClose, duration])
 
   if (!toast) return null
   const isError = toast.type === 'error'
   const Icon = isError ? CircleAlert : CheckCircle2
 
   return (
-    <div className={`app-toast ${isError ? 'app-toast-error' : 'app-toast-success'}`} role={isError ? 'alert' : 'status'} aria-live={isError ? 'assertive' : 'polite'}>
-      <Icon size={20} aria-hidden="true" />
-      <span>{toast.message}</span>
-      <button type="button" className="app-toast-close" onClick={onClose} aria-label="Dismiss notification"><X size={17} /></button>
+    <div
+      key={toast.id}
+      className={`app-toast ${isError ? 'app-toast-error' : 'app-toast-success'}`}
+      role={isError ? 'alert' : 'status'}
+      aria-live={isError ? 'assertive' : 'polite'}
+    >
+      <div className="app-toast-content">
+        <span className="app-toast-icon"><Icon size={19} aria-hidden="true" /></span>
+        <span className="app-toast-message">{toast.message}</span>
+        <button type="button" className="app-toast-close" onClick={onClose} aria-label="Dismiss notification"><X size={17} /></button>
+      </div>
+      <div className="app-toast-timer" aria-hidden="true">
+        <span key={toast.id} style={{ animationDuration: `${duration}ms` }} />
+      </div>
     </div>
   )
 }
