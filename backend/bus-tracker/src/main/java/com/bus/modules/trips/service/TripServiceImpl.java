@@ -83,7 +83,8 @@ public class TripServiceImpl implements TripService {
         for (TripScheduleEntity schedule : schedules) {
             if (!isScheduleOperating(schedule, date, day)) continue;
 
-            if (tripRepository.existsByBusAssignmentIdAndTripDateAndTripType(\n                    schedule.getBusAssignmentId(), date, schedule.getTripType())) {
+            if (tripRepository.existsByBusAssignmentIdAndTripDateAndTripType(
+                    schedule.getBusAssignmentId(), date, schedule.getTripType())) {
                 continue;
             }
 
