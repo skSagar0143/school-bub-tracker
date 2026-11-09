@@ -51,7 +51,7 @@ export default function AppRoutes({ token, user, menus, currentPath, navigate, s
     <Route path="/student-transport-assignment" element={<StudentTransportAssignmentsPage {...shared} />} />
     <Route path="/trip-schedules" element={<TripSchedulesPage {...shared} />} />
     <Route path="/trips" element={<TripsPage {...shared} />} />
-    <Route path="/drivers/dashboard" element={<DriversDashboard token={token} />} />
-    <Route path="*" element={<DashboardPage user={user} path={currentPath} token={token} menus={menus} navigate={navigate} />} />
+    <Route path="/drivers/dashboard" element={<DriversDashboard token={token} setError={setError} />} />
+    <Route path="*" element={<DashboardPage user={user} path={currentPath} token={token} menus={menus} navigate={navigate} setError={setError} />} />
   </Routes>
 }
