@@ -83,18 +83,20 @@ public class TripServiceImpl implements TripService {
         for (TripScheduleEntity schedule : schedules) {
             if (!isScheduleOperating(schedule, date, day)) continue;
 
-            if (tripRepository.existsByBusAssignmentIdAndTripDateAndTripType(
-                    schedule.getBusAssignmentId(), date, schedule.getTripType())) {
-                continue;
-            }
-
-            BusAssignmentEntity assignment = busAssignmentRepository.findById(schedule.getBusAssignmentId())
+            // Serialize generation for this bus assignment. The row lock ensures that
+            // concurrent requests cannot both pass the duplicate-trip check.
+            BusAssignmentEntity assignment = busAssignmentRepository.findByIdForUpdate(schedule.getBusAssignmentId())
                     .filter(item -> "ACTIVE".equalsIgnoreCase(item.getStatus()))
                     .filter(item -> item.getSchoolId().equals(request.schoolId()))
                     .filter(item -> !item.getStartDate().isAfter(date))
                     .filter(item -> item.getEndDate() == null || !item.getEndDate().isBefore(date))
                     .orElseThrow(() -> new IllegalArgumentException(
                             "The bus assignment for schedule " + schedule.getId() + " is not active on " + date + "."));
+
+            if (tripRepository.existsByBusAssignmentIdAndTripDateAndTripType(
+                    assignment.getId(), date, schedule.getTripType())) {
+                continue;
+            }
 
             BusEntity bus = busRepository.findById(assignment.getBusId())
                     .filter(item -> "ACTIVE".equalsIgnoreCase(item.getStatus()))
@@ -165,7 +167,10 @@ public class TripServiceImpl implements TripService {
         return !date.isBefore(schedule.getEffectiveFrom())
                 && (schedule.getEffectiveUntil() == null || !date.isAfter(schedule.getEffectiveUntil()))
                 && schedule.getOperatingDays() != null
-                && Set.of(schedule.getOperatingDays().split(",")).contains(day);
+                && java.util.Arrays.stream(schedule.getOperatingDays().split(","))
+                        .map(String::trim)
+                        .map(value -> value.toUpperCase(java.util.Locale.ROOT))
+                        .anyMatch(day::equals);
     }
 
     private String dayCode(DayOfWeek day) {
@@ -195,7 +200,7 @@ public class TripServiceImpl implements TripService {
     private List<TripStudentEntity> createTripStudents(TripEntity trip, String tripType, Long schoolId,
             LocalDate date, Map<Long, TripStopEntity> tripStopsByRouteStopId) {
         List<StudentTransportAssignmentEntity> assignments =
-                transportAssignmentRepository.findByStatusOrderByStartDateDesc("ACTIVE");
+                transportAssignmentRepository.findActiveForTripGeneration(schoolId, date);
         List<TripStudentEntity> result = new ArrayList<>();
 
         for (StudentTransportAssignmentEntity assignment : assignments) {
