@@ -1,3 +1,4 @@
+import type { FormEvent } from 'react'
 import { api } from '../../pages/LegacyPages'
 import { useCallback, useEffect, useState } from 'react'
 import type { School, SchoolRoute, SchoolRouteForm } from '../../pages/LegacyPages'
