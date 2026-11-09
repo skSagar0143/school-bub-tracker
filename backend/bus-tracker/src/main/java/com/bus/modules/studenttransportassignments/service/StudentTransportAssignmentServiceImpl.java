@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
 
 import com.bus.modules.busassignments.entity.BusAssignmentEntity;
 import com.bus.modules.busassignments.repository.BusAssignmentRepository;
@@ -36,6 +37,7 @@ public class StudentTransportAssignmentServiceImpl implements StudentTransportAs
     private final BusRepository busRepository;
 
     @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public StudentTransportAssignmentEntity createAssignment(StudentTransportAssignmentEntity assignment) {
         validateAssignment(assignment, null);
         assignment.setStatus("ACTIVE");
@@ -43,6 +45,7 @@ public class StudentTransportAssignmentServiceImpl implements StudentTransportAs
     }
 
     @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public StudentTransportAssignmentEntity updateAssignment(Long id, StudentTransportAssignmentEntity request) {
         StudentTransportAssignmentEntity existing = getAssignmentById(id);
         validateAssignment(request, id);
