@@ -2,9 +2,9 @@ import { api } from '../../pages/LegacyPages'
 import { useEffect, useState } from 'react'
 import type { Driver } from '../../pages/LegacyPages'
 
-export function DriversDashboard({ token }: { token: string }) {
+export function DriversDashboard({ token, setError }: { token: string; setError: (value: string) => void }) {
   const [drivers, setDrivers] = useState<Driver[]>([])
-  useEffect(() => { api<Driver[]>('/user', token).then(data => setDrivers(data.filter(user => user.role === 'DRIVER'))).catch(() => setDrivers([])) }, [token])
+  useEffect(() => { api<Driver[]>('/user', token).then(data => setDrivers(data.filter(user => user.role === 'DRIVER'))).catch(err => { setDrivers([]); setError(err instanceof Error ? err.message : 'Unable to load driver accounts.') }) }, [token, setError])
   const active = drivers.filter(driver => driver.enabled).length
   return <><div className="page-intro"><div><h2>Drivers overview</h2><p>Current driver accounts registered for this school.</p></div><span className="status-pill active">LIVE DATA</span></div>
     <div className="stats-grid"><div className="stat-card"><span>TOTAL DRIVERS</span><strong>{drivers.length}</strong><small>Registered driver accounts</small></div><div className="stat-card"><span>ACTIVE DRIVERS</span><strong>{active}</strong><small>Enabled accounts</small></div><div className="stat-card"><span>INACTIVE DRIVERS</span><strong>{drivers.length - active}</strong><small>Disabled accounts</small></div></div>
