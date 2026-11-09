@@ -7,6 +7,8 @@ import { LoginPage } from './features/auth/LoginPage'
 import { MenuItem } from './components/navigation/MenuItem'
 import type { LoginResponse, LoginUser, Menu, MenuResponse, School, ThemeMode } from './pages/LegacyPages'
 import AppRoutes from './routes/AppRoutes'
+import { Toast } from './components/ui/Toast'
+import type { ToastMessage } from './components/ui/Toast'
 import './App.css'
 
 const menuCacheKey = (user: LoginUser) => `schoolroute-menus:${user.id}:${user.role}`
@@ -82,8 +84,10 @@ function App() {
   const [loginPassword, setLoginPassword] = useState('')
   const [loginBusy, setLoginBusy] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [notice, setNotice] = useState('')
+  const [toast, setToast] = useState<ToastMessage | null>(null)
+  const setError = useCallback((message: string) => setToast(message ? { id: Date.now(), type: 'error', message } : null), [])
+  const setNotice = useCallback((message: string) => setToast(message ? { id: Date.now(), type: 'success', message } : null), [])
+  const closeToast = useCallback(() => setToast(null), [])
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => (localStorage.getItem('schoolroute-theme') as ThemeMode) || 'dark')
   const [userMenuOpen, setUserMenuOpen] = useState(false)
@@ -212,10 +216,12 @@ function App() {
   const activeMenu = useMemo(() => flattenMenus(menus).find(item => item.path === currentPath), [menus, currentPath])
 
   if (!token || !user) {
-    return <LoginPage email={loginEmail} password={loginPassword} setEmail={setLoginEmail} setPassword={setLoginPassword} onSubmit={handleLogin} busy={loginBusy} error={error} />
+    return <><Toast toast={toast} onClose={closeToast} /><LoginPage email={loginEmail} password={loginPassword} setEmail={setLoginEmail} setPassword={setLoginPassword} onSubmit={handleLogin} busy={loginBusy} /> </>
   }
 
   return (
+    <>
+    <Toast toast={toast} onClose={closeToast} />
     <main className={`app-shell ${mobileSidebarOpen ? 'mobile-open' : ''}`}>
       <button className="sidebar-backdrop" aria-label="Close navigation" onClick={() => setMobileSidebarOpen(false)} />
       <aside className="sidebar">
@@ -233,12 +239,11 @@ function App() {
         </header>
         <div className="content">
           {loading && <div className="loading">Loading your workspace…</div>}
-          {error && <div className="message error">{error}</div>}
-          {notice && <div className="message success">{notice}</div>}
           <AppRoutes token={token} user={user} menus={menus} currentPath={currentPath} navigate={navigate} setError={setError} setNotice={setNotice} />
         </div>
       </section>
     </main>
+    </>
   )
 }
 
