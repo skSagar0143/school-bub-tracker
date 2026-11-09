@@ -8,6 +8,7 @@ import { DriversDashboard } from '../features/drivers/DriversDashboard'
 import { RoutesPage } from '../features/routes/RoutesPage'
 import { RouteStopsPage } from '../features/route-stops/RouteStopsPage'
 import { BusAssignmentsPage } from '../features/bus-assignments/BusAssignmentsPage'
+import { BusAssignmentStopsPage } from '../features/bus-assignment-stops/BusAssignmentStopsPage'
 import { DriverAssignmentsPage } from '../features/driver-assignments/DriverAssignmentsPage'
 import { StudentTransportAssignmentsPage } from '../features/student-transport-assignments/StudentTransportAssignmentsPage'
 import { DashboardPage } from '../features/dashboard/DashboardPage'
@@ -41,6 +42,7 @@ export default function AppRoutes({ token, user, menus, currentPath, navigate, s
     <Route path="/route-assignment" element={<BusAssignmentsPage {...shared} />} />
     <Route path="/bus-assignments" element={<BusAssignmentsPage {...shared} />} />
     <Route path="/bus-assignment" element={<BusAssignmentsPage {...shared} />} />
+    <Route path="/bus-assignment-stops" element={<BusAssignmentStopsPage {...shared} />} />
     <Route path="/driver-assignments" element={<DriverAssignmentsPage {...shared} />} />
     <Route path="/driver-assignment" element={<DriverAssignmentsPage {...shared} />} />
     <Route path="/student-transport-assignments" element={<StudentTransportAssignmentsPage {...shared} />} />
