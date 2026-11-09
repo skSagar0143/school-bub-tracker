@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type { School, SchoolRoute, SchoolRouteForm } from '../../pages/LegacyPages'
 import { emptySchoolRoute, downloadExcelReport, downloadPdfReport } from '../../pages/LegacyPages'
 import { MoreVertical, RefreshCw, Route } from 'lucide-react'
-import { TextInput, NumberInput, SearchInput, SelectInput, TextArea } from '../../components/ui/FormControls'
+import { TextInput, TimeInput, NumberInput, SearchInput, SelectInput, TextArea } from '../../components/ui/FormControls'
 
 export function RoutesPage({ token, setError, setNotice }: { token: string; setError: (value: string) => void; setNotice: (value: string) => void }) {
   const [routes, setRoutes] = useState<SchoolRoute[]>([])
@@ -117,8 +117,8 @@ export function RoutesPage({ token, setError, setNotice }: { token: string; setE
           <label className="field"><span>Ending point *</span><TextInput required maxLength={200} value={form.endingPoint} onChange={e => setForm({ ...form, endingPoint: e.target.value })} /></label>
           <label className="field"><span>Estimated distance (km)</span><NumberInput type="number" min="0" step="0.1" value={form.estimatedDistance ?? ''} onChange={e => setForm({ ...form, estimatedDistance: e.target.value ? Number(e.target.value) : null })} placeholder="e.g. 12.5" /></label>
           <label className="field"><span>Estimated duration (minutes)</span><NumberInput type="number" min="1" step="1" value={form.estimatedDuration ?? ''} onChange={e => setForm({ ...form, estimatedDuration: e.target.value ? Number(e.target.value) : null })} placeholder="e.g. 45" /></label>
-          <label className="field"><span>Start time</span><TextInput type="time" value={form.startTime || ''} onChange={e => setForm({ ...form, startTime: e.target.value })} /></label>
-          <label className="field"><span>End time</span><TextInput type="time" value={form.endTime || ''} onChange={e => setForm({ ...form, endTime: e.target.value })} /></label>
+          <label className="field"><span>Start time</span><TimeInput value={form.startTime || ''} onChange={value => setForm({ ...form, startTime: value })} /></label>
+          <label className="field"><span>End time</span><TimeInput value={form.endTime || ''} onChange={value => setForm({ ...form, endTime: value })} /></label>
           <label className="field field-wide"><span>Description</span><TextArea rows={2} maxLength={500} value={form.description || ''} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Optional route notes" /></label>
         </div>
         <div className="form-actions">
