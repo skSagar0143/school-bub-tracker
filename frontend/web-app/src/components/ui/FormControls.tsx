@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes, ReactNode } from 'react'
-import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight, Clock3, ChevronDown } from 'lucide-react'
 
 type FieldProps = { label: string; required?: boolean; hint?: string; error?: string; children: ReactNode; className?: string }
 export function FormField({ label, required, hint, error, children, className = '' }: FieldProps) {
@@ -20,6 +20,56 @@ export function SelectInput(props: SelectProps) { return <select {...props} clas
 type AreaProps = TextareaHTMLAttributes<HTMLTextAreaElement>
 export function TextArea(props: AreaProps) { return <textarea {...props} className={`ui-input ui-textarea ${props.className || ''}`} /> }
 export function SearchInput(props: InputProps) { return <input type="search" {...props} className={`ui-input ui-search-input ${props.className || ''}`} /> }
+
+
+type TimeInputProps = {
+  value: string
+  onChange: (value: string) => void
+  required?: boolean
+  disabled?: boolean
+  id?: string
+  placeholder?: string
+}
+export function TimeInput({ value, onChange, required, disabled, id, placeholder = 'Select time' }: TimeInputProps) {
+  const [open, setOpen] = useState(false)
+  const [hour24 = 7, minuteValue = 0] = value.split(':').map(Number)
+  const period = hour24 >= 12 ? 'PM' : 'AM'
+  const hour12 = hour24 % 12 || 12
+  const display = value ? `${String(hour12).padStart(2, '0')}:${String(minuteValue).padStart(2, '0')} ${period}` : ''
+  const updateTime = (hour: number, minute: number, meridiem: string) => {
+    const normalizedHour = hour % 12 + (meridiem === 'PM' ? 12 : 0)
+    onChange(`${String(normalizedHour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`)
+  }
+
+  return <div className="time-input-wrap">
+    <button
+      type="button"
+      id={id}
+      className="ui-input time-trigger"
+      onClick={() => setOpen(current => !current)}
+      aria-expanded={open}
+      aria-haspopup="dialog"
+      aria-required={required}
+      disabled={disabled}
+    >
+      <span className={display ? '' : 'date-placeholder'}>{display || placeholder}</span>
+      <span className="time-trigger-icon"><Clock3 size={17}/><ChevronDown size={14}/></span>
+    </button>
+    {open && <div className="time-popover" role="dialog" aria-label="Choose time">
+      <div className="time-popover-heading">Choose a time</div>
+      <div className="time-selectors">
+        <label><span>Hour</span><select aria-label="Hour" value={hour12} onChange={event => updateTime(Number(event.target.value), minuteValue, period)}>{Array.from({length:12},(_,index)=>index+1).map(hour=><option key={hour} value={hour}>{String(hour).padStart(2,'0')}</option>)}</select></label>
+        <span className="time-separator">:</span>
+        <label><span>Minute</span><select aria-label="Minute" value={minuteValue} onChange={event => updateTime(hour12, Number(event.target.value), period)}>{Array.from({length:60},(_,minute)=>minute).map(minute=><option key={minute} value={minute}>{String(minute).padStart(2,'0')}</option>)}</select></label>
+        <label className="time-period"><span>Period</span><select aria-label="AM or PM" value={period} onChange={event => updateTime(hour12, minuteValue, event.target.value)}><option value="AM">AM</option><option value="PM">PM</option></select></label>
+      </div>
+      <div className="time-popover-footer">
+        <button type="button" onClick={() => { const now = new Date(); onChange(`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`); setOpen(false) }}>Use current time</button>
+        <button type="button" className="time-done" onClick={() => setOpen(false)}>Done</button>
+      </div>
+    </div>}
+  </div>
+}
 
 type DateInputProps = Omit<InputProps, 'type' | 'value' | 'onChange'> & { value: string; onChange: (value: string) => void }
 const pad = (value: number) => String(value).padStart(2, '0')
