@@ -105,7 +105,7 @@ export function TripsPage({ token, setError, setNotice }: Props) {
   const getTripProgress = (trip: Trip) => {
     const completedStopCount = trip.stops.filter(stop => ['DEPARTED', 'SKIPPED'].includes(stop.status)).length
     const completedStudentCount = trip.students.filter(student =>
-      ['PICKUP'.includes(trip.tripType) ? 'BOARDED' : 'DROPPED', 'ABSENT'].includes(student.status),
+      [trip.tripType === 'PICKUP' ? 'BOARDED' : 'DROPPED', 'ABSENT'].includes(student.status),
     ).length
     const currentStop = trip.stops.find(stop => stop.status === 'ARRIVED') || null
     const nextStop = trip.stops.find(stop => stop.status === 'PENDING') || null
