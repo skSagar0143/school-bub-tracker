@@ -1,4 +1,4 @@
-import type { SchoolRoute } from '../../pages/LegacyPages'
+import type { FormEvent } from 'react'
 import { EmailInput, PasswordInput } from '../../components/ui/FormControls'
 
 export function LoginPage({ email, password, setEmail, setPassword, onSubmit, busy, error }: {
