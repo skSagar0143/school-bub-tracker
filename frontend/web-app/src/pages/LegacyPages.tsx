@@ -189,6 +189,7 @@ export function withStudentMenu(items: Menu[], role?: UserRole): Menu[] {
     if (name === 'driver assignment' || name === 'driver assignments') return { ...menu, path: menu.path || '/driver-assignments', subMenus: [] }
     if (name === 'student transport assignment' || name === 'student transport assignments' || name === 'student assignments') return { ...menu, path: menu.path || '/student-transport-assignments', subMenus: [] }
     if (name === 'trip schedule' || name === 'trip schedules' || name === 'schedules') return { ...menu, path: menu.path || '/trip-schedules', subMenus: [] }
+    if (name === 'trip' || name === 'trips' || name === 'trip management' || name === 'trip managements') return { ...menu, path: menu.path || '/trips', subMenus: [] }
     return menu
   })
   return normalized
