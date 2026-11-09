@@ -501,3 +501,27 @@ html[data-theme="dark"] .app-toast-error{background:#421f2b;border-color:#87364b
 .date-calendar-selectors select:last-child{width:78px}
 .date-calendar-selectors select:focus{border-color:#4389d7;box-shadow:0 0 0 2px rgba(67,137,215,.14)}
 html[data-theme="dark"] .date-calendar-selectors select{background:#101e35;border-color:rgba(135,165,215,.28);color:#e8efff}
+
+
+/* Shared polished time picker */
+.time-input-wrap{position:relative;width:100%}
+.time-trigger{display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;cursor:pointer}
+.time-trigger-icon{display:inline-flex;align-items:center;gap:7px;color:#6f88aa;flex-shrink:0}
+.time-trigger-icon svg:last-child{opacity:.65}
+.time-popover{position:absolute;z-index:35;top:calc(100% + 8px);left:0;width:min(320px,calc(100vw - 56px));padding:15px;border:1px solid var(--field-border,#dce3ed);border-radius:14px;background:var(--panel-bg,#fff);box-shadow:0 18px 45px rgba(22,42,72,.18)}
+.time-popover-heading{font:700 13px Manrope,sans-serif;color:var(--field-text,#23344c);margin-bottom:14px}
+.time-selectors{display:flex;align-items:flex-end;gap:8px}
+.time-selectors label{display:flex;flex:1;min-width:0;flex-direction:column;gap:6px}
+.time-selectors label span{font-size:10px;font-weight:700;color:var(--text-muted,#8190a5)}
+.time-selectors select{width:100%;min-width:0;height:43px;border:1px solid var(--field-border,#dce3ed);border-radius:9px;padding:0 9px;background:var(--field-bg,#fff);color:var(--field-text,#23344c);font:700 14px 'DM Sans',sans-serif;outline:none}
+.time-selectors select:focus{border-color:#4389d7;box-shadow:0 0 0 3px rgba(67,137,215,.12)}
+.time-selectors .time-period{flex:.9}
+.time-separator{font-size:18px;font-weight:800;color:var(--text-muted,#8190a5);padding-bottom:10px}
+.time-popover-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:14px;padding-top:11px;border-top:1px solid var(--field-border,#e4eaf2)}
+.time-popover-footer button{border:0;border-radius:7px;padding:8px 10px;background:transparent;color:#477cb9;font:600 11px 'DM Sans',sans-serif;cursor:pointer}
+.time-popover-footer button:hover{background:rgba(75,130,195,.1)}
+.time-popover-footer .time-done{background:#286fbd;color:#fff;padding:8px 15px}
+.time-popover-footer .time-done:hover{background:#195ca8}
+html[data-theme="dark"] .time-popover{--field-border:rgba(135,165,215,.22);--field-text:#e8efff;background:#101e35;border-color:var(--field-border)}
+html[data-theme="dark"] .time-selectors select{--field-bg:#152440;--field-border:rgba(135,165,215,.28);--field-text:#e8efff;background:#152440;border-color:var(--field-border);color:#e8efff}
+html[data-theme="dark"] .time-popover-footer{border-color:rgba(135,165,215,.2)}
