@@ -8,6 +8,7 @@ import { TextInput, NumberInput, EmailInput, PhoneInput, DateInput, SearchInput,
 
 export function StudentsPage({ token, setError, setNotice }: { token: string; setError: (value: string) => void; setNotice: (value: string) => void }) {
   const [students, setStudents] = useState<Student[]>([])
+  const [schools, setSchools] = useState<School[]>([])
   const [form, setForm] = useState<StudentForm>(emptyStudent)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [showForm, setShowForm] = useState(false)
@@ -25,6 +26,7 @@ export function StudentsPage({ token, setError, setNotice }: { token: string; se
         api<School[]>('/school', token).catch(() => [] as School[]),
       ])
       setStudents(rows)
+      setSchools(schools.filter(school => school.status === 'ACTIVE'))
       setSelectedIds(current => current.filter(id => rows.some(student => student.id === id && student.status === 'ACTIVE')))
       if (!form.schoolId && schools.length) setForm(current => ({ ...current, schoolId: schools[0].id }))
     } catch (err) {
@@ -43,7 +45,7 @@ export function StudentsPage({ token, setError, setNotice }: { token: string; se
 
   function openCreateForm() {
     setEditingId(null)
-    setForm(emptyStudent)
+    setForm({ ...emptyStudent, schoolId: schools[0]?.id || 0 })
     setShowForm(true)
   }
 
@@ -138,7 +140,7 @@ export function StudentsPage({ token, setError, setNotice }: { token: string; se
 
       <form onSubmit={submit}>
         <div className="form-grid">
-          <label className="field"><span>School ID *</span><NumberInput type="number" min="1" required value={form.schoolId || ''} onChange={e => setForm({ ...form, schoolId: Number(e.target.value) })} /></label>
+          <label className="field"><span>School *</span><SelectInput required value={form.schoolId || ''} onChange={e => setForm({ ...form, schoolId: Number(e.target.value) })}><option value="">Select school</option>{schools.map(school => <option key={school.id} value={school.id}>{school.name} ({school.code})</option>)}</SelectInput></label>
           <label className="field"><span>Admission number *</span><TextInput required maxLength={50} value={form.admissionNumber} onChange={e => setForm({ ...form, admissionNumber: e.target.value })} /></label>
           <label className="field"><span>First name *</span><TextInput required maxLength={100} value={form.firstName} onChange={e => setForm({ ...form, firstName: e.target.value })} /></label>
           <label className="field"><span>Last name</span><TextInput maxLength={100} value={form.lastName || ''} onChange={e => setForm({ ...form, lastName: e.target.value })} /></label>
@@ -155,7 +157,7 @@ export function StudentsPage({ token, setError, setNotice }: { token: string; se
         </div>
         <div className="form-actions">
           <button type="button" className="button secondary" onClick={() => { setShowForm(false); setEditingId(null) }}>Cancel</button>
-          <button className="button primary" disabled={busy}>{busy ? 'Saving…' : editingId ? 'Update student' : 'Save student'}</button>
+          <button className="button primary" disabled={busy || !schools.length || !form.schoolId}>{busy ? 'Saving…' : editingId ? 'Update student' : 'Save student'}</button>
         </div>
       </form>
     </section>}
