@@ -31,6 +31,9 @@ public class DriverAbsenceEntity {
     @Column(name = "driver_id", nullable = false)
     private Long driverId;
 
+    @Column(name = "replacement_driver_id")
+    private Long replacementDriverId;
+
     @Column(name = "start_date", nullable = false)
     private LocalDate startDate;
 
