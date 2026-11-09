@@ -39,16 +39,16 @@ public class StudentTransportAssignmentEntity {
     @Column(name = "route_id", nullable = false)
     private Long routeId;
 
-    @Column(name = "requires_pickup", nullable = false)
+    @Column(name = "requires_pickup", nullable = false, columnDefinition = "BOOLEAN DEFAULT TRUE")
     private Boolean requiresPickup = true;
 
-    @Column(name = "requires_drop", nullable = false)
+    @Column(name = "requires_drop", nullable = false, columnDefinition = "BOOLEAN DEFAULT TRUE")
     private Boolean requiresDrop = true;
 
-    @Column(name = "pickup_stop_id")
+    @Column(name = "pickup_stop_id", nullable = false)
     private Long pickupStopId;
 
-    @Column(name = "drop_stop_id")
+    @Column(name = "drop_stop_id", nullable = false)
     private Long dropStopId;
 
     @Column(name = "start_date", nullable = false)
