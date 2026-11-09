@@ -96,6 +96,18 @@ export function TripsPage({ token, setError, setNotice }: Props) {
   ].join(' ').toLowerCase().includes(search.toLowerCase())), [trips, buses, routes, drivers, search])
   const selectedTrip = trips.find(item => item.id === selectedTripId) || null
 
+  const canOperateStop = (trip: Trip, stop: TripStop) => {
+    if (trip.status === 'COMPLETED' || trip.status === 'CANCELLED') return false
+    return trip.stops
+      .filter(item => item.stopOrder < stop.stopOrder)
+      .every(item => item.status === 'DEPARTED' || item.status === 'SKIPPED')
+  }
+
+  const canUpdateStudent = (trip: Trip, student: TripStudent) =>
+    trip.status === 'IN_PROGRESS' &&
+    trip.stops.some(stop => stop.id === student.stopId && stop.status === 'ARRIVED') &&
+    student.status === 'WAITING'
+
   const getTripReadiness = (trip: Trip) => {
     const bus = buses.find(item => item.id === trip.busId)
     const route = routes.find(item => item.id === trip.routeId)
@@ -261,8 +273,8 @@ export function TripsPage({ token, setError, setNotice }: Props) {
               <td>{stop.estimatedArrivalTime?.slice(0, 5) || '—'}</td>
               <td><span className={`status-pill ${statusClass(stop.status)}`}>{stop.status}</span></td>
               <td>{selectedTrip.status !== 'COMPLETED' && selectedTrip.status !== 'CANCELLED' && <div className="inline-actions">
-                {stop.status === 'PENDING' && <><button className="button secondary small" disabled={updating} onClick={() => void updateStopStatus(selectedTrip, stop, 'ARRIVED')}>Arrived</button><button className="button secondary small" disabled={updating} onClick={() => void updateStopStatus(selectedTrip, stop, 'SKIPPED')}>Skip</button></>}
-                {stop.status === 'ARRIVED' && <button className="button secondary small" disabled={updating} onClick={() => void updateStopStatus(selectedTrip, stop, 'DEPARTED')}>Departed</button>}
+                {stop.status === 'PENDING' && <><button className="button secondary small" disabled={updating || !canOperateStop(selectedTrip, stop)} onClick={() => void updateStopStatus(selectedTrip, stop, 'ARRIVED')}>Arrived</button><button className="button secondary small" disabled={updating || !canOperateStop(selectedTrip, stop)} onClick={() => void updateStopStatus(selectedTrip, stop, 'SKIPPED')}>Skip</button></>}
+                {stop.status === 'ARRIVED' && <button className="button secondary small" disabled={updating || !selectedTrip.students.filter(student => student.stopId === stop.id).every(student => student.status === (selectedTrip.tripType === 'PICKUP' ? 'BOARDED' : 'DROPPED') || student.status === 'ABSENT')} onClick={() => void updateStopStatus(selectedTrip, stop, 'DEPARTED')}>Departed</button>}
               </div>}</td>
             </tr>)}
             {selectedTrip.stops.length === 0 && <tr><td colSpan={4} className="empty-cell">No stops were snapshotted.</td></tr>}
@@ -276,7 +288,7 @@ export function TripsPage({ token, setError, setNotice }: Props) {
               <td>{student.stopName}</td>
               <td><span className={`status-pill ${statusClass(student.status)}`}>{student.status}</span></td>
               <td>{selectedTrip.status !== 'COMPLETED' && selectedTrip.status !== 'CANCELLED' && <div className="inline-actions">
-                {student.status === 'WAITING' && <><button className="button secondary small" disabled={updating} onClick={() => void updateStudentStatus(selectedTrip, student, selectedTrip.tripType === 'PICKUP' ? 'BOARDED' : 'DROPPED')}>{selectedTrip.tripType === 'PICKUP' ? 'Boarded' : 'Dropped'}</button><button className="button secondary small" disabled={updating} onClick={() => void updateStudentStatus(selectedTrip, student, 'ABSENT')}>Absent</button></>}
+                {student.status === 'WAITING' && <><button className="button secondary small" disabled={updating || !canUpdateStudent(selectedTrip, student)} onClick={() => void updateStudentStatus(selectedTrip, student, selectedTrip.tripType === 'PICKUP' ? 'BOARDED' : 'DROPPED')}>{selectedTrip.tripType === 'PICKUP' ? 'Boarded' : 'Dropped'}</button><button className="button secondary small" disabled={updating || !canUpdateStudent(selectedTrip, student)} onClick={() => void updateStudentStatus(selectedTrip, student, 'ABSENT')}>Absent</button></>}
               </div>}</td>
             </tr>)}
             {selectedTrip.students.length === 0 && <tr><td colSpan={4} className="empty-cell">No students were assigned to this trip.</td></tr>}
