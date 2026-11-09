@@ -93,8 +93,10 @@ public class TripServiceImpl implements TripService {
                     .orElseThrow(() -> new IllegalArgumentException(
                             "The bus assignment for schedule " + schedule.getId() + " is not active on " + date + "."));
 
-            if (tripRepository.existsByBusAssignmentIdAndTripDateAndTripType(
-                    assignment.getId(), date, schedule.getTripType())) {
+            // A locking read is a current read under MySQL REPEATABLE_READ,
+            // so it sees a trip committed by a request that held this assignment lock.
+            if (!tripRepository.findExistingTripForUpdate(
+                    assignment.getId(), date, schedule.getTripType()).isEmpty()) {
                 continue;
             }
 
