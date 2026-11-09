@@ -96,6 +96,22 @@ export function TripsPage({ token, setError, setNotice }: Props) {
   ].join(' ').toLowerCase().includes(search.toLowerCase())), [trips, buses, routes, drivers, search])
   const selectedTrip = trips.find(item => item.id === selectedTripId) || null
 
+  const getTripReadiness = (trip: Trip) => {
+    const bus = buses.find(item => item.id === trip.busId)
+    const route = routes.find(item => item.id === trip.routeId)
+    const driver = trip.driverId ? drivers.find(item => item.id === trip.driverId) : null
+    const stopIds = new Set(trip.stops.map(stop => stop.id))
+    const checks = [
+      { label: 'Assigned bus is available and active', passed: Boolean(bus && bus.status === 'ACTIVE') },
+      { label: 'Assigned route is available and active', passed: Boolean(route && route.status === 'ACTIVE') },
+      { label: 'An active driver is assigned', passed: Boolean(driver && driver.status === 'ACTIVE') },
+      { label: 'At least one trip stop is configured', passed: trip.stops.length > 0 },
+      { label: 'Students are assigned to this trip', passed: trip.students.length > 0 },
+      { label: 'Every student is linked to a trip stop', passed: trip.students.length > 0 && trip.students.every(student => stopIds.has(student.stopId)) },
+    ]
+    return { checks, ready: checks.every(check => check.passed), issueCount: checks.filter(check => !check.passed).length }
+  }
+
   async function generate() {
     setGenerating(true); setError(''); setNotice('')
     try {
@@ -190,14 +206,14 @@ export function TripsPage({ token, setError, setNotice }: Props) {
       <div className="table-wrap">
         <table><thead><tr>
           <th className="row-actions-heading" aria-label="Row actions"></th>
-          <th>Bus</th><th>Route</th><th>Journey</th><th>Scheduled</th><th>Driver</th><th>Students</th><th>Stops</th><th>Status</th>
+          <th>Bus</th><th>Route</th><th>Journey</th><th>Scheduled</th><th>Driver</th><th>Students</th><th>Stops</th><th>Readiness</th><th>Status</th>
         </tr></thead><tbody>
           {filteredTrips.map(item => <tr key={item.id}>
             <td className="row-actions-cell"><div className="row-action-menu">
               <button type="button" className="row-action-trigger" aria-label="Trip actions" aria-haspopup="true" aria-expanded={openActionMenuId === item.id} onClick={() => setOpenActionMenuId(current => current === item.id ? null : item.id)}><MoreVertical size={18}/></button>
               {openActionMenuId === item.id && <div className="row-action-dropdown" role="menu">
                 <button type="button" role="menuitem" onClick={() => { setSelectedTripId(item.id); setOpenActionMenuId(null) }}>View trip details</button>
-                {item.status === 'SCHEDULED' && <button type="button" role="menuitem" disabled={updating} onClick={() => { setOpenActionMenuId(null); void updateTripStatus(item, 'IN_PROGRESS') }}>Start trip</button>}
+                {item.status === 'SCHEDULED' && <button type="button" role="menuitem" disabled={updating || !getTripReadiness(item).ready} title={!getTripReadiness(item).ready ? 'Open trip details to review readiness issues' : 'Start trip'} onClick={() => { setOpenActionMenuId(null); void updateTripStatus(item, 'IN_PROGRESS') }}>Start trip</button>}
                 {item.status === 'IN_PROGRESS' && <button type="button" role="menuitem" disabled={updating} onClick={() => { setOpenActionMenuId(null); void updateTripStatus(item, 'COMPLETED') }}>Complete trip</button>}
                 {(item.status === 'SCHEDULED' || item.status === 'IN_PROGRESS') && <button type="button" role="menuitem" className="danger" disabled={updating} onClick={() => { setOpenActionMenuId(null); if (window.confirm('Cancel this trip?')) void updateTripStatus(item, 'CANCELLED') }}>Cancel trip</button>}
               </div>}
@@ -206,10 +222,11 @@ export function TripsPage({ token, setError, setNotice }: Props) {
             <td><span className={`status-pill ${item.tripType === 'PICKUP' ? 'active' : 'inactive'}`}>{item.tripType === 'PICKUP' ? 'Morning pickup' : 'Afternoon drop'}</span></td>
             <td>{item.scheduledStartTime.slice(0, 5)}</td><td>{driverLabel(item.driverId)}</td>
             <td>{item.students.length}</td><td>{item.stops.length}</td>
+            <td><span className={`status-pill ${getTripReadiness(item).ready ? 'active' : 'pending'}`}>{getTripReadiness(item).ready ? 'Ready' : `${getTripReadiness(item).issueCount} issue(s)`}</span></td>
             <td><span className={`status-pill ${statusClass(item.status)}`}>{item.status.replace('_', ' ')}</span></td>
           </tr>)}
-          {loading && <tr><td colSpan={9} className="empty-cell">Loading trips…</td></tr>}
-          {!loading && filteredTrips.length === 0 && <tr><td colSpan={9} className="empty-cell">{search ? 'No trips match your search.' : 'No trips exist for this date. Generate trips from active trip schedules.'}</td></tr>}
+          {loading && <tr><td colSpan={10} className="empty-cell">Loading trips…</td></tr>}
+          {!loading && filteredTrips.length === 0 && <tr><td colSpan={10} className="empty-cell">{search ? 'No trips match your search.' : 'No trips exist for this date. Generate trips from active trip schedules.'}</td></tr>}
         </tbody></table>
       </div>
     </section>
@@ -219,6 +236,22 @@ export function TripsPage({ token, setError, setNotice }: Props) {
         <div><span className="section-kicker">TRIP DETAILS</span><h3>{busLabel(selectedTrip.busId)} · {selectedTrip.tripType === 'PICKUP' ? 'Morning pickup' : 'Afternoon drop'}</h3><p>{routeLabel(selectedTrip.routeId)} · {selectedTrip.tripDate} · {driverLabel(selectedTrip.driverId)}</p></div>
         <button type="button" className="button secondary" onClick={() => setSelectedTripId(null)}>Close details</button>
       </div>
+      {(() => {
+        const readiness = getTripReadiness(selectedTrip)
+        return <div className={`trip-readiness ${readiness.ready ? 'is-ready' : 'has-issues'}`}>
+          <div className="trip-readiness-heading">
+            <div><span className="section-kicker">START CHECKLIST</span><h4>Operational readiness</h4></div>
+            <span className={`status-pill ${readiness.ready ? 'active' : 'pending'}`}>{readiness.ready ? 'Ready to start' : `${readiness.issueCount} item(s) need attention`}</span>
+          </div>
+          <div className="trip-readiness-list">
+            {readiness.checks.map(check => <div key={check.label} className={check.passed ? 'check-passed' : 'check-failed'}>
+              <span className="trip-readiness-icon">{check.passed ? '✓' : '!'}</span><span>{check.label}</span>
+              <strong>{check.passed ? 'Passed' : 'Required'}</strong>
+            </div>)}
+          </div>
+          {!readiness.ready && <p className="trip-readiness-note">Resolve the required items in Bus Assignment, Driver Assignment, Route Stops, or Student Transport Assignment, then refresh this page. Starting is disabled until every check passes.</p>}
+        </div>
+      })()}
       <div className="trip-detail-grid">
         <div>
           <h4><RouteIcon size={16}/> Trip stops ({selectedTrip.stops.length})</h4>
