@@ -1150,7 +1150,7 @@ function StudentTransportAssignmentsPage({ token, setError, setNotice }: { token
       if (Number(form.pickupStopId) === Number(form.dropStopId)) throw new Error('Home stop and school stop must be different.')
       const homeStop = stops.find(stop => stop.id === Number(form.pickupStopId))
       const schoolStop = stops.find(stop => stop.id === Number(form.dropStopId))
-      if (!homeStop || !schoolStop) throw new Error('Select both the student's home stop and the school stop.')
+      if (!homeStop || !schoolStop) throw new Error("Select both the student's home stop and the school stop.")
       if (homeStop.routeId !== Number(form.routeId) || schoolStop.routeId !== Number(form.routeId)) {
         throw new Error('Both stops must belong to the selected route.')
       }
