@@ -50,4 +50,9 @@ public interface BusAssignmentRepository extends JpaRepository<BusAssignmentEnti
         @Param("endDate") LocalDate endDate,
         @Param("excludeId") Long excludeId
     );
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT a FROM BusAssignmentEntity a WHERE a.id = :id")
+    java.util.Optional<BusAssignmentEntity> findByIdForUpdate(@Param("id") Long id);
+
 }
