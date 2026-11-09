@@ -24,4 +24,7 @@ public interface TripRepository extends JpaRepository<TripEntity, Long> {
     List<TripEntity> findBySchoolIdAndTripDateOrderByScheduledStartTimeAsc(Long schoolId, LocalDate tripDate);
     List<TripEntity> findBySchoolIdOrderByTripDateDescScheduledStartTimeAsc(Long schoolId);
     Optional<TripEntity> findByIdAndSchoolId(Long id, Long schoolId);
+
+    List<TripEntity> findBySchoolIdAndDriverIdAndTripDateBetweenAndStatus(
+        Long schoolId, Long driverId, LocalDate startDate, LocalDate endDate, String status);
 }
