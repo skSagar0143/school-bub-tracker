@@ -14,7 +14,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @Table(name = "trips", uniqueConstraints = {
-    @UniqueConstraint(name = "uk_trip_schedule_date", columnNames = {"trip_schedule_id", "trip_date"})
+    @UniqueConstraint(name = "uk_trip_assignment_date_type", columnNames = {"bus_assignment_id", "trip_date", "trip_type"})
 }, indexes = {
     @Index(name = "idx_trip_school_date", columnList = "school_id,trip_date"),
     @Index(name = "idx_trip_bus_date", columnList = "bus_id,trip_date")
