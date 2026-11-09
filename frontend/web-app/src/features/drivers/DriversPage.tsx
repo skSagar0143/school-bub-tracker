@@ -20,7 +20,8 @@ export function DriversPage({ token, setError, setNotice }: { token: string; set
   const [absenceStartDate, setAbsenceStartDate] = useState('')
   const [absenceEndDate, setAbsenceEndDate] = useState('')
   const [absenceReason, setAbsenceReason] = useState('')
-  const [absenceHistory, setAbsenceHistory] = useState<Array<{ id: number; startDate: string; endDate: string; reason: string | null; status: string }>>([])
+  const [replacementDriverId, setReplacementDriverId] = useState<number | ''>('')
+  const [absenceHistory, setAbsenceHistory] = useState<Array<{ id: number; startDate: string; endDate: string; reason: string | null; status: string; replacementDriverId: number | null }>>([])
   const [absenceBusy, setAbsenceBusy] = useState(false)
 
   const load = useCallback(async () => {
@@ -109,8 +110,9 @@ export function DriversPage({ token, setError, setNotice }: { token: string; set
     setAbsenceStartDate('')
     setAbsenceEndDate('')
     setAbsenceReason('')
+    setReplacementDriverId('')
     try {
-      const rows = await api<Array<{ id: number; startDate: string; endDate: string; reason: string | null; status: string }>>(
+      const rows = await api<Array<{ id: number; startDate: string; endDate: string; reason: string | null; status: string; replacementDriverId: number | null }>>(
         `/driver-absences/driver/${driver.id}`, token)
       setAbsenceHistory(rows)
     } catch (err) {
@@ -125,6 +127,10 @@ export function DriversPage({ token, setError, setNotice }: { token: string; set
     setAbsenceBusy(true)
     setError(''); setNotice('')
     try {
+      if (!replacementDriverId) {
+        setError('Select an active replacement driver before saving this absence.')
+        return
+      }
       await api('/driver-absences/driver/' + absenceDriver.id, token, {
         method: 'POST',
         body: JSON.stringify({
@@ -132,15 +138,17 @@ export function DriversPage({ token, setError, setNotice }: { token: string; set
           startDate: absenceStartDate,
           endDate: absenceEndDate,
           reason: absenceReason.trim() || null,
+          replacementDriverId: Number(replacementDriverId),
         }),
       })
       setNotice(`${absenceDriver.firstName} ${absenceDriver.lastName || ''} marked absent for the selected dates.`.trim())
-      const rows = await api<Array<{ id: number; startDate: string; endDate: string; reason: string | null; status: string }>>(
+      const rows = await api<Array<{ id: number; startDate: string; endDate: string; reason: string | null; status: string; replacementDriverId: number | null }>>(
         `/driver-absences/driver/${absenceDriver.id}`, token)
       setAbsenceHistory(rows)
       setAbsenceStartDate('')
       setAbsenceEndDate('')
       setAbsenceReason('')
+      setReplacementDriverId('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to mark driver absent.')
     } finally {
@@ -210,12 +218,13 @@ export function DriversPage({ token, setError, setNotice }: { token: string; set
         <div className="form-grid">
           <label className="field"><span>Absence start date *</span><DateInput required value={absenceStartDate} onChange={setAbsenceStartDate} /></label>
           <label className="field"><span>Absence end date *</span><DateInput required value={absenceEndDate} onChange={setAbsenceEndDate} /></label>
+          <label className="field"><span>Replacement driver *</span><SelectInput required value={replacementDriverId} onChange={e => setReplacementDriverId(e.target.value ? Number(e.target.value) : '')}><option value="">Select active driver</option>{drivers.filter(driver => driver.schoolId === absenceDriver.schoolId && driver.status === 'ACTIVE' && driver.id !== absenceDriver.id).map(driver => <option key={driver.id} value={driver.id}>{driver.firstName} {driver.lastName} · {driver.driverCode}</option>)}</SelectInput></label>
           <label className="field field-wide"><span>Reason (optional)</span><TextArea rows={2} maxLength={500} value={absenceReason} onChange={e => setAbsenceReason(e.target.value)} placeholder="e.g. Medical leave, personal work" /></label>
         </div>
-        <div className="form-actions"><button className="button primary" disabled={absenceBusy || !absenceStartDate || !absenceEndDate || absenceEndDate < absenceStartDate}>{absenceBusy ? 'Saving…' : 'Save absence'}</button></div>
+        <div className="form-actions"><button className="button primary" disabled={absenceBusy || !absenceStartDate || !absenceEndDate || !replacementDriverId || absenceEndDate < absenceStartDate}>{absenceBusy ? 'Saving…' : 'Save absence'}</button></div>
       </form>
       <div className="panel-heading"><div><span className="section-kicker">HISTORY</span><h3>Absence records</h3></div></div>
-      {absenceHistory.length ? <div className="table-wrap"><table><thead><tr><th>From</th><th>To</th><th>Reason</th><th>Status</th></tr></thead><tbody>{absenceHistory.map(row => <tr key={row.id}><td>{row.startDate}</td><td>{row.endDate}</td><td>{row.reason || '—'}</td><td><span className="status-pill active">{row.status}</span></td></tr>)}</tbody></table></div> : <p className="empty-cell">No absence records for this driver.</p>}
+      {absenceHistory.length ? <div className="table-wrap"><table><thead><tr><th>From</th><th>To</th><th>Replacement driver</th><th>Reason</th><th>Status</th></tr></thead><tbody>{absenceHistory.map(row => <tr key={row.id}><td>{row.startDate}</td><td>{row.endDate}</td><td>{drivers.find(driver => driver.id === row.replacementDriverId)?.firstName || '—'} {drivers.find(driver => driver.id === row.replacementDriverId)?.lastName || ''}</td><td>{row.reason || '—'}</td><td><span className="status-pill active">{row.status}</span></td></tr>)}</tbody></table></div> : <p className="empty-cell">No absence records for this driver.</p>}
     </section>}
 
     {!showForm && <>
