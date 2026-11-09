@@ -1,10 +1,16 @@
 package com.bus.modules.studenttransportassignments.service;
 
+import java.util.Comparator;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.bus.modules.busassignments.entity.BusAssignmentEntity;
+import com.bus.modules.busassignments.repository.BusAssignmentRepository;
+import com.bus.modules.busassignmentstops.repository.BusAssignmentStopRepository;
+import com.bus.modules.busses.entity.BusEntity;
+import com.bus.modules.busses.repository.BusRepository;
 import com.bus.modules.routes.entity.RoutesEntity;
 import com.bus.modules.routes.repository.RouteRepository;
 import com.bus.modules.routestops.entity.RouteStopsEntity;
@@ -25,6 +31,9 @@ public class StudentTransportAssignmentServiceImpl implements StudentTransportAs
     private final StudentsRepository studentsRepository;
     private final RouteRepository routeRepository;
     private final RouteStopsRepository routeStopsRepository;
+    private final BusAssignmentRepository busAssignmentRepository;
+    private final BusAssignmentStopRepository busAssignmentStopRepository;
+    private final BusRepository busRepository;
 
     @Override
     public StudentTransportAssignmentEntity createAssignment(StudentTransportAssignmentEntity assignment) {
@@ -41,6 +50,8 @@ public class StudentTransportAssignmentServiceImpl implements StudentTransportAs
         existing.setSchoolId(request.getSchoolId());
         existing.setStudentId(request.getStudentId());
         existing.setRouteId(request.getRouteId());
+        existing.setMorningBusAssignmentId(request.getMorningBusAssignmentId());
+        existing.setAfternoonBusAssignmentId(request.getAfternoonBusAssignmentId());
         existing.setPickupStopId(request.getPickupStopId());
         existing.setDropStopId(request.getDropStopId());
         existing.setRequiresPickup(request.getRequiresPickup());
@@ -97,7 +108,6 @@ public class StudentTransportAssignmentServiceImpl implements StudentTransportAs
             throw new IllegalArgumentException("Home stop and school stop must be different");
         }
 
-        // Morning: home pickup -> school drop. Afternoon: school pickup -> home drop.
         if (requiresPickup && (!Boolean.TRUE.equals(homeStop.getPickupAllowed())
                 || !Boolean.TRUE.equals(schoolStop.getDropAllowed()))) {
             throw new IllegalArgumentException("Morning pickup requires home pickup and school drop-off permissions");
@@ -111,6 +121,62 @@ public class StudentTransportAssignmentServiceImpl implements StudentTransportAs
                 assignment.getStudentId(), assignment.getStartDate(), assignment.getEndDate(), excludeId)) {
             throw new IllegalArgumentException("Student already has an overlapping active transport assignment");
         }
+
+        assignment.setMorningBusAssignmentId(requiresPickup
+                ? selectBusAssignment(assignment, assignment.getMorningBusAssignmentId(), homeStop, schoolStop,
+                        true, excludeId)
+                : null);
+        assignment.setAfternoonBusAssignmentId(requiresDrop
+                ? selectBusAssignment(assignment, assignment.getAfternoonBusAssignmentId(), homeStop, schoolStop,
+                        false, excludeId)
+                : null);
+    }
+
+    private Long selectBusAssignment(StudentTransportAssignmentEntity studentAssignment, Long requestedId,
+            RouteStopsEntity homeStop, RouteStopsEntity schoolStop, boolean morning, Long excludeId) {
+        List<BusAssignmentEntity> candidates = busAssignmentRepository
+                .findByStatusOrderByStartDateDesc("ACTIVE").stream()
+                .filter(item -> item.getSchoolId().equals(studentAssignment.getSchoolId()))
+                .filter(item -> item.getRouteId().equals(studentAssignment.getRouteId()))
+                .filter(item -> !item.getStartDate().isAfter(studentAssignment.getStartDate()))
+                .filter(item -> item.getEndDate() == null || studentAssignment.getEndDate() == null
+                        || !item.getEndDate().isBefore(studentAssignment.getEndDate()))
+                .filter(item -> busAssignmentStopRepository.existsByBusAssignmentIdAndRouteStopId(
+                        item.getId(), homeStop.getId()))
+                .filter(item -> busAssignmentStopRepository.existsByBusAssignmentIdAndRouteStopId(
+                        item.getId(), schoolStop.getId()))
+                .filter(item -> requestedId == null || item.getId().equals(requestedId))
+                .filter(item -> hasCapacity(item, studentAssignment, morning, excludeId))
+                .sorted(Comparator.comparingLong(item -> occupancy(item.getId(), studentAssignment, morning, excludeId)))
+                .toList();
+
+        if (candidates.isEmpty()) {
+            throw new IllegalArgumentException(requestedId == null
+                    ? "No bus serving both selected stops has available capacity for the "
+                            + (morning ? "morning pickup" : "afternoon drop")
+                    : "Selected bus does not serve both stops or has no available capacity");
+        }
+        return candidates.get(0).getId();
+    }
+
+    private boolean hasCapacity(BusAssignmentEntity assignment, StudentTransportAssignmentEntity studentAssignment,
+            boolean morning, Long excludeId) {
+        BusEntity bus = busRepository.findById(assignment.getBusId())
+                .filter(item -> "ACTIVE".equals(item.getStatus()))
+                .orElse(null);
+        if (bus == null || bus.getCapacity() == null || bus.getCapacity() <= 0) {
+            return false;
+        }
+        return occupancy(assignment.getId(), studentAssignment, morning, excludeId) < bus.getCapacity();
+    }
+
+    private long occupancy(Long busAssignmentId, StudentTransportAssignmentEntity studentAssignment,
+            boolean morning, Long excludeId) {
+        return morning
+                ? assignmentRepository.countMorningOccupancy(busAssignmentId, studentAssignment.getStartDate(),
+                        studentAssignment.getEndDate(), excludeId)
+                : assignmentRepository.countAfternoonOccupancy(busAssignmentId, studentAssignment.getStartDate(),
+                        studentAssignment.getEndDate(), excludeId);
     }
 
     @Override
