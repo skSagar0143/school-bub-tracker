@@ -1,3 +1,4 @@
+import { api } from '../../pages/LegacyPages'
 import { useCallback, useEffect, useState } from 'react'
 import type { School, SchoolForm } from '../../pages/LegacyPages'
 import { emptySchool, Detail } from '../../pages/LegacyPages'
