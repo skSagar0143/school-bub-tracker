@@ -1,6 +1,7 @@
+import type { FormEvent } from 'react'
 import { api } from '../../pages/LegacyPages'
 import { useCallback, useEffect, useState } from 'react'
-import type { Driver, School, Bus, BusForm } from '../../pages/LegacyPages'
+import type { School, Bus, BusForm } from '../../pages/LegacyPages'
 import { emptyBus, downloadExcelReport, downloadPdfReport } from '../../pages/LegacyPages'
 import { BusFront, MoreVertical, RefreshCw } from 'lucide-react'
 import { TextInput, NumberInput, DateInput, SearchInput, SelectInput } from '../../components/ui/FormControls'
