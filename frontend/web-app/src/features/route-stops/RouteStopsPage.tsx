@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type { SchoolRoute, RouteStop, RouteStopForm } from '../../pages/LegacyPages'
 import { emptyRouteStop, downloadExcelReport, downloadPdfReport } from '../../pages/LegacyPages'
 import { MapPinned, MoreVertical, RefreshCw } from 'lucide-react'
-import { TextInput, NumberInput, SearchInput, SelectInput, TextArea } from '../../components/ui/FormControls'
+import { TextInput, TimeInput, NumberInput, SearchInput, SelectInput, TextArea } from '../../components/ui/FormControls'
 
 export function RouteStopsPage({ token, setError, setNotice }: { token: string; setError: (value: string) => void; setNotice: (value: string) => void }) {
   const [stops, setStops] = useState<RouteStop[]>([])
@@ -119,7 +119,7 @@ export function RouteStopsPage({ token, setError, setNotice }: { token: string; 
           <label className="field"><span>Route *</span><SelectInput required value={form.routeId || ''} onChange={e => setForm({ ...form, routeId: Number(e.target.value) })}><option value="">Select route</option>{routes.filter(route => route.status === 'ACTIVE').map(route => <option key={route.id} value={route.id}>{route.routeName} ({route.routeCode})</option>)}</SelectInput></label>
           <label className="field"><span>Stop name *</span><TextInput required maxLength={150} value={form.stopName} onChange={e => setForm({ ...form, stopName: e.target.value })} placeholder="e.g. Noida Sector 15 Metro Station" /></label>
           <label className="field"><span>Stop order *</span><NumberInput required type="number" min="1" step="1" value={form.stopOrder} onChange={e => setForm({ ...form, stopOrder: Number(e.target.value) })} /></label>
-          <label className="field"><span>Estimated arrival time</span><TextInput type="time" value={form.estimatedArrivalTime || ''} onChange={e => setForm({ ...form, estimatedArrivalTime: e.target.value })} /></label>
+          <label className="field"><span>Estimated arrival time</span><TimeInput value={form.estimatedArrivalTime || ''} onChange={value => setForm({ ...form, estimatedArrivalTime: value })} /></label>
           <label className="field"><span>Latitude</span><NumberInput type="number" min="-90" max="90" step="any" value={form.latitude ?? ''} onChange={e => setForm({ ...form, latitude: e.target.value ? Number(e.target.value) : null })} placeholder="e.g. 28.5852" /></label>
           <label className="field"><span>Longitude</span><NumberInput type="number" min="-180" max="180" step="any" value={form.longitude ?? ''} onChange={e => setForm({ ...form, longitude: e.target.value ? Number(e.target.value) : null })} placeholder="e.g. 77.3119" /></label>
           <label className="field field-wide"><span>Stop address</span><TextArea rows={2} maxLength={500} value={form.stopAddress || ''} onChange={e => setForm({ ...form, stopAddress: e.target.value })} placeholder="Enter the complete pickup/drop-off address" /></label>
