@@ -11,6 +11,7 @@ import { BusAssignmentsPage } from '../features/bus-assignments/BusAssignmentsPa
 import { BusAssignmentStopsPage } from '../features/bus-assignment-stops/BusAssignmentStopsPage'
 import { DriverAssignmentsPage } from '../features/driver-assignments/DriverAssignmentsPage'
 import { StudentTransportAssignmentsPage } from '../features/student-transport-assignments/StudentTransportAssignmentsPage'
+import { TripSchedulesPage } from '../features/trip-schedules/TripSchedulesPage'
 import { DashboardPage } from '../features/dashboard/DashboardPage'
 
 type Props = {
@@ -47,6 +48,7 @@ export default function AppRoutes({ token, user, menus, currentPath, navigate, s
     <Route path="/driver-assignment" element={<DriverAssignmentsPage {...shared} />} />
     <Route path="/student-transport-assignments" element={<StudentTransportAssignmentsPage {...shared} />} />
     <Route path="/student-transport-assignment" element={<StudentTransportAssignmentsPage {...shared} />} />
+    <Route path="/trip-schedules" element={<TripSchedulesPage {...shared} />} />
     <Route path="/drivers/dashboard" element={<DriversDashboard token={token} />} />
     <Route path="*" element={<DashboardPage user={user} path={currentPath} token={token} menus={menus} navigate={navigate} />} />
   </Routes>
