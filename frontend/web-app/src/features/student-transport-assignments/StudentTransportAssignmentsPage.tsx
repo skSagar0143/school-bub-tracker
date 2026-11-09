@@ -72,7 +72,7 @@ export function StudentTransportAssignmentsPage({ token, setError, setNotice }: 
   const availableBusAssignments = busAssignments.filter(item => item.status === 'ACTIVE'
     && item.schoolId === Number(form.schoolId) && item.routeId === Number(form.routeId)
     && (!form.startDate || item.startDate <= form.startDate)
-    && (!item.endDate || !form.endDate || item.endDate >= form.endDate))
+    && (!item.endDate || (!!form.endDate && item.endDate >= form.endDate)))
 
   const filtered = assignments.filter(item => [
     studentLabel(item.studentId), routeLabel(item.routeId), stopLabel(item.pickupStopId), stopLabel(item.dropStopId),
