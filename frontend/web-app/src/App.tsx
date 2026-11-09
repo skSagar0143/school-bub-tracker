@@ -9,12 +9,49 @@ import type { LoginResponse, LoginUser, Menu, MenuResponse, ThemeMode } from './
 import AppRoutes from './routes/AppRoutes'
 import './App.css'
 
+const menuCacheKey = (user: LoginUser) => `schoolroute-menus:${user.id}:${user.role}`
+
+type CachedMenuResponse = {
+  userId: string
+  role: LoginUser['role']
+  defaultPath: string
+  menus: Menu[]
+}
+
+function readCachedMenus(currentUser: LoginUser): CachedMenuResponse | null {
+  try {
+    const raw = localStorage.getItem(menuCacheKey(currentUser))
+    if (!raw) return null
+    const cached = JSON.parse(raw) as CachedMenuResponse
+    if (
+      cached.userId !== currentUser.id ||
+      cached.role !== currentUser.role ||
+      !Array.isArray(cached.menus)
+    ) return null
+    return cached
+  } catch {
+    localStorage.removeItem(menuCacheKey(currentUser))
+    return null
+  }
+}
+
+function saveCachedMenus(currentUser: LoginUser, result: MenuResponse) {
+  const cached: CachedMenuResponse = {
+    userId: currentUser.id,
+    role: currentUser.role,
+    defaultPath: result.defaultPath || '/',
+    menus: withStudentMenu(result.menus || [], currentUser.role),
+  }
+  localStorage.setItem(menuCacheKey(currentUser), JSON.stringify(cached))
+  return cached
+}
+
 function App() {
   const [token, setToken] = useState(sessionStorage.getItem('accessToken') || '')
   const [user, setUser] = useState<LoginUser | null>(() => {
     try { return JSON.parse(sessionStorage.getItem('currentUser') || 'null') as LoginUser | null } catch { return null }
   })
-  const [menus, setMenus] = useState<Menu[]>([])
+  const [menus, setMenus] = useState<Menu[]>(() => user ? readCachedMenus(user)?.menus || [] : [])
   const location = useLocation()
   const routerNavigate = useNavigate()
   const currentPath = location.pathname
@@ -52,19 +89,41 @@ function App() {
  
 
   useEffect(() => {
-    if (!token) return
+    if (!token || !user) return
     let active = true
+
+    // Reuse the menu saved at login. A page refresh should not call /menu/me again.
+    const cached = readCachedMenus(user)
+    if (cached) {
+      setMenus(cached.menus)
+      if (currentPath === '/' || currentPath === '/login') {
+        navigate(cached.defaultPath || '/')
+      }
+      setLoading(false)
+      return () => { active = false }
+    }
+
+    // Fetch only when this user's menu is not cached (for example, an older session).
     setLoading(true)
     api<MenuResponse>('/menu/me', token)
-      .then(result => { if (active) { setMenus(withStudentMenu(result.menus || [], user?.role)); if (currentPath === '/' || currentPath === '/login') navigate(result.defaultPath || '/') } })
+      .then(result => {
+        if (!active) return
+        const saved = saveCachedMenus(user, result)
+        setMenus(saved.menus)
+        if (currentPath === '/' || currentPath === '/login') {
+          navigate(saved.defaultPath || '/')
+        }
+      })
       .catch(() => { if (active) logout() })
       .finally(() => { if (active) setLoading(false) })
+
     return () => { active = false }
     // Initial session restoration only; navigation is handled separately.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   function logout() {
+    if (user) localStorage.removeItem(menuCacheKey(user))
     sessionStorage.removeItem('accessToken')
     sessionStorage.removeItem('currentUser')
     setToken('')
@@ -83,8 +142,9 @@ function App() {
       sessionStorage.setItem('currentUser', JSON.stringify(result.user))
       setToken(result.accessToken); setUser(result.user); setUserMenuOpen(false)
       const menuResult = await api<MenuResponse>('/menu/me', result.accessToken)
-      setMenus(withStudentMenu(menuResult.menus || [], result.user.role))
-      navigate(menuResult.defaultPath || '/')
+      const savedMenus = saveCachedMenus(result.user, menuResult)
+      setMenus(savedMenus.menus)
+      navigate(savedMenus.defaultPath || '/')
     } catch (err) {
       sessionStorage.removeItem('accessToken'); sessionStorage.removeItem('currentUser')
       setError(err instanceof Error ? err.message : 'Unable to sign in. Check your credentials.')
