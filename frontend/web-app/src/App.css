@@ -530,3 +530,19 @@ html[data-theme="dark"] .date-calendar-selectors select{background:#101e35;borde
 html[data-theme="dark"] .time-popover{--field-border:rgba(135,165,215,.22);--field-text:#e8efff;background:#101e35;border-color:var(--field-border)}
 html[data-theme="dark"] .time-selectors select{--field-bg:#152440;--field-border:rgba(135,165,215,.28);--field-text:#e8efff;background:#152440;border-color:var(--field-border);color:#e8efff}
 html[data-theme="dark"] .time-popover-footer{border-color:rgba(135,165,215,.2)}
+
+/* Trip start readiness checklist */
+.trip-readiness{margin-top:18px;padding:16px;border:1px solid var(--panel-border,rgba(130,150,180,.25));border-radius:12px;background:var(--surface-soft,rgba(120,140,170,.05))}
+.trip-readiness-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:13px}
+.trip-readiness-heading h4{margin:5px 0 0;font-size:15px;color:var(--text-main,#273950)}
+.trip-readiness-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.trip-readiness-list>div{display:flex;align-items:center;gap:9px;min-width:0;padding:10px 11px;border:1px solid var(--panel-border,rgba(130,150,180,.2));border-radius:9px;background:var(--panel-bg,rgba(255,255,255,.45));font-size:11px}
+.trip-readiness-list>div>span:nth-child(2){flex:1}
+.trip-readiness-list strong{font-size:10px;white-space:nowrap}
+.trip-readiness-icon{display:grid;place-items:center;width:20px;height:20px;flex:none;border-radius:50%;font-weight:800}
+.check-passed .trip-readiness-icon{background:rgba(38,174,119,.14);color:#159765}
+.check-passed strong{color:#159765}
+.check-failed .trip-readiness-icon{background:rgba(220,65,65,.13);color:#d34c4c}
+.check-failed strong{color:#d34c4c}
+.trip-readiness-note{margin:12px 0 0;color:var(--text-muted,#8190a5);font-size:11px;line-height:1.55}
+@media(max-width:650px){.trip-readiness-heading{align-items:flex-start;flex-direction:column}.trip-readiness-list{grid-template-columns:1fr}}
