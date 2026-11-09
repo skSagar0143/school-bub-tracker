@@ -329,17 +329,26 @@ public class TripServiceImpl implements TripService {
             ensurePreviousStopsClosed(trip, stop);
         }
 
+        if (Set.of("ARRIVED", "SKIPPED").contains(next) && "SCHEDULED".equals(trip.getStatus())) {
+            validateTripReadyToStart(trip);
+            trip.setStatus("IN_PROGRESS");
+            trip.setActualStartAt(LocalDateTime.now());
+            tripRepository.save(trip);
+        }
+        if (Set.of("ARRIVED", "SKIPPED").contains(next) && !"IN_PROGRESS".equals(trip.getStatus())) {
+            throw new IllegalArgumentException("Stops can only be operated while the trip is in progress.");
+        }
         if ("ARRIVED".equals(next) && stop.getArrivedAt() == null) {
-            if ("SCHEDULED".equals(trip.getStatus())) {
-                validateTripReadyToStart(trip);
-                trip.setStatus("IN_PROGRESS");
-                trip.setActualStartAt(LocalDateTime.now());
-                tripRepository.save(trip);
-            }
-            if (!"IN_PROGRESS".equals(trip.getStatus())) {
-                throw new IllegalArgumentException("Only an in-progress trip can arrive at a stop.");
-            }
             stop.setArrivedAt(LocalDateTime.now());
+        }
+        if ("SKIPPED".equals(next)) {
+            tripStudentRepository.findByTripIdOrderByStopNameAscStudentNameAsc(tripId).stream()
+                    .filter(student -> student.getStopId().equals(stop.getId()))
+                    .filter(student -> "WAITING".equals(student.getStatus()))
+                    .forEach(student -> {
+                        student.setStatus("ABSENT");
+                        student.setRemarks("Stop skipped during trip operations.");
+                    });
         }
         if ("DEPARTED".equals(next) && stop.getDepartedAt() == null) {
             boolean unfinishedStudents = tripStudentRepository
@@ -377,6 +386,7 @@ public class TripServiceImpl implements TripService {
             throw new IllegalArgumentException("Arrive at " + studentStop.getStopName() + " before updating this student's status.");
         }
         String completedStatus = "PICKUP".equals(trip.getTripType()) ? "BOARDED" : "DROPPED";
+        if (student.getStatus().equals(next)) return toResponse(trip);
         if (!Set.of(completedStatus, "ABSENT").contains(next)) {
             throw new IllegalArgumentException("Student status must be " + completedStatus + " or ABSENT for this trip.");
         }
