@@ -148,6 +148,7 @@ function App() {
   const [notice, setNotice] = useState('')
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => (localStorage.getItem('schoolroute-theme') as ThemeMode) || 'dark')
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
 
   const navigate = useCallback((path: string) => {
     if (!path) return
@@ -231,13 +232,13 @@ function App() {
         <p className="nav-caption">WORKSPACE</p>
         <nav className="menu-tree">{menus.map(menu => <MenuItem key={menu.id} menu={menu} currentPath={currentPath} navigate={navigate} />)}</nav>
         <div className="sidebar-note"><span className="note-dot" /> Secure role-based access</div>
-        <div className="sidebar-footer"><strong>{user.fullName}</strong><span>{user.role.replace('_', ' ')}</span><button className="logout-link" onClick={logout}>Sign out</button></div>
+        
       </aside>
       <section className="workspace">
         <header className="topbar">
           <button className="mobile-menu-button" aria-label="Open navigation" onClick={() => setMobileSidebarOpen(true)}>☰</button>
           <div className="topbar-title"><span className="eyebrow">{user.role.replace('_', ' ')}</span><h1>{activeMenu?.name || pageTitle(currentPath)}</h1></div>
-          <div className="topbar-right"><label className="theme-picker" title="Choose appearance"><span className="theme-picker-icon">{themeMode === 'system' ? <Monitor size={16} /> : themeMode === 'dark' ? <Moon size={16} /> : <Sun size={16} />}</span><select aria-label="Appearance mode" value={themeMode} onChange={event => setThemeMode(event.target.value as ThemeMode)}><option value="system">System</option><option value="dark">Dark</option><option value="light">Light</option></select></label><span className="secure-label"><ShieldCheck size={14} /> Signed in</span><span className="avatar">{initials(user.fullName)}</span></div>
+          <div className="topbar-right"><label className="theme-picker" title="Choose appearance"><span className="theme-picker-icon">{themeMode === 'system' ? <Monitor size={16} /> : themeMode === 'dark' ? <Moon size={16} /> : <Sun size={16} />}</span><select aria-label="Appearance mode" value={themeMode} onChange={event => setThemeMode(event.target.value as ThemeMode)}><option value="system">System</option><option value="dark">Dark</option><option value="light">Light</option></select></label><span className="secure-label"><ShieldCheck size={14} /> Signed in</span><div className="user-menu"><button type="button" className="user-menu-trigger" aria-label="Open user menu" aria-haspopup="true" aria-expanded={userMenuOpen} onClick={() => setUserMenuOpen(value => !value)}><UserRound size={19} /></button>{userMenuOpen && <div className="user-menu-dropdown" role="menu"><div className="user-menu-profile"><strong>{user.fullName}</strong><span>{user.role.replace('_', ' ')}</span></div><button type="button" role="menuitem" className="user-menu-signout" onClick={logout}>Sign out</button></div>}</div></div>
         </header>
         <div className="content">
           {loading && <div className="loading">Loading your workspace…</div>}
