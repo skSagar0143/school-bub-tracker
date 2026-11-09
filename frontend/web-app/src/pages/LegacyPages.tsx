@@ -117,7 +117,7 @@ export function downloadPdfReport(title: string, headers: string[], rows: (strin
   popup.document.close()
 }
 
-async function api<T>(path: string, token: string, options: RequestInit = {}): Promise<T> {
+export async function api<T>(path: string, token: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...options.headers },
