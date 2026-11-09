@@ -32,7 +32,9 @@ type TimeInputProps = {
 }
 export function TimeInput({ value, onChange, required, disabled, id, placeholder = 'Select time' }: TimeInputProps) {
   const [open, setOpen] = useState(false)
-  const [hour24 = 7, minuteValue = 0] = value.split(':').map(Number)
+  const [parsedHour, parsedMinute] = value.split(':').map(Number)
+  const hour24 = Number.isFinite(parsedHour) ? parsedHour : 7
+  const minuteValue = Number.isFinite(parsedMinute) ? parsedMinute : 0
   const period = hour24 >= 12 ? 'PM' : 'AM'
   const hour12 = hour24 % 12 || 12
   const display = value ? `${String(hour12).padStart(2, '0')}:${String(minuteValue).padStart(2, '0')} ${period}` : ''
