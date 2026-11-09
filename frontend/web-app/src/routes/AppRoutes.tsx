@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Route, Routes } from 'react-router-dom'
 import type { LoginUser, Menu } from '../pages/LegacyPages'
 import {
   SchoolPage, StudentsPage, BusesPage, DriversPage, RoutesPage, RouteStopsPage,
