@@ -1141,6 +1141,15 @@ function StudentTransportAssignmentsPage({ token, setError, setNotice }: { token
     event.preventDefault(); setBusy(true); setError(''); setNotice('')
     try {
       if (Number(form.pickupStopId) === Number(form.dropStopId)) throw new Error('Pickup and drop-off stops must be different.')
+      const pickupStop = stops.find(stop => stop.id === Number(form.pickupStopId))
+      const dropStop = stops.find(stop => stop.id === Number(form.dropStopId))
+      if (!pickupStop || !dropStop) throw new Error('Select valid pickup and drop-off stops.')
+      if (pickupStop.routeId !== Number(form.routeId) || dropStop.routeId !== Number(form.routeId)) {
+        throw new Error('Both stops must belong to the selected route.')
+      }
+      if (pickupStop.stopOrder >= dropStop.stopOrder) {
+        throw new Error('Pickup stop must come before drop-off stop on the selected route.')
+      }
       const payload = {
         ...form, schoolId: Number(form.schoolId), studentId: Number(form.studentId), routeId: Number(form.routeId),
         pickupStopId: Number(form.pickupStopId), dropStopId: Number(form.dropStopId),
