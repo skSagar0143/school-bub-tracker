@@ -3,27 +3,26 @@ import type { UserRole, LoginUser, Menu, Driver, School } from '../../pages/Lega
 import { api, flattenMenus, iconFor } from '../../pages/LegacyPages'
 import { Activity, ArrowUpRight, Bell, BusFront, Building2, CalendarDays, ChevronRight, Clock3, GraduationCap, MapPinned, RefreshCw, Route, ShieldCheck, Users } from 'lucide-react'
 
-export function DashboardPage({ user, path, token, menus, navigate }: { user: LoginUser; path: string; token: string; menus: Menu[]; navigate: (path: string) => void }) {
+export function DashboardPage({ user, path, token, menus, navigate, setError }: { user: LoginUser; path: string; token: string; menus: Menu[]; navigate: (path: string) => void; setError: (value: string) => void }) {
   const [schools, setSchools] = useState<School[]>([])
   const [users, setUsers] = useState<Driver[]>([])
   const [dataLoading, setDataLoading] = useState(user.role === 'SCHOOL_ADMIN')
-  const [dataError, setDataError] = useState('')
   const today = new Intl.DateTimeFormat('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date())
 
   const loadAdminOverview = useCallback(async () => {
     if (user.role !== 'SCHOOL_ADMIN') return
     setDataLoading(true)
-    setDataError('')
+    setError('')
     const [schoolResult, userResult] = await Promise.allSettled([
       api<School[]>('/school', token),
       api<Driver[]>('/user', token),
     ])
     if (schoolResult.status === 'fulfilled') setSchools(schoolResult.value)
-    else setDataError(schoolResult.reason instanceof Error ? schoolResult.reason.message : 'School information could not be loaded.')
+    else setError(schoolResult.reason instanceof Error ? schoolResult.reason.message : 'School information could not be loaded.')
     if (userResult.status === 'fulfilled') setUsers(userResult.value)
-    else setDataError(userResult.reason instanceof Error ? userResult.reason.message : 'User information could not be loaded.')
+    else setError(userResult.reason instanceof Error ? userResult.reason.message : 'User information could not be loaded.')
     setDataLoading(false)
-  }, [token, user.role])
+  }, [token, user.role, setError])
 
   useEffect(() => { void loadAdminOverview() }, [loadAdminOverview])
 
@@ -59,7 +58,6 @@ export function DashboardPage({ user, path, token, menus, navigate }: { user: Lo
       <div><span className="section-kicker">SCHOOL TRANSPORT INTELLIGENCE</span><h2>Operations Overview</h2><p>Welcome back, {user.fullName.split(' ')[0]}. Here is your school’s transport snapshot.</p></div>
       <button className="dashboard-refresh" onClick={() => void loadAdminOverview()} disabled={dataLoading}><RefreshCw size={14} className={dataLoading ? 'spin' : ''} /> Refresh data</button>
     </section>
-    {dataError && <div className="message error">{dataError}</div>}
     <section className="reference-kpis">
       <article className="reference-card revenue-card"><div className="reference-card-top"><span>School Profile</span><span className="live-indicator"><i /> {school?.status || 'SETUP'}</span></div><strong>{dataLoading ? '…' : schools.length}</strong><small><span className="trend-up">↗</span> {school ? 'School registered' : 'Profile not configured'}</small><div className="sparkline sparkline-blue"><i/><i/><i/><i/><i/><i/><i/><i/><i/><i/><i/><i/></div></article>
       <article className="reference-card"><div className="reference-card-top"><span>Total Accounts</span><Users size={17}/></div><strong>{dataLoading ? '…' : totalUsers.toLocaleString('en-IN')}</strong><small><span className="trend-up">↗</span> {activeUsers} enabled accounts</small><div className="dot-matrix">{Array.from({length:54},(_,i)=><i key={i}/>)}</div></article>
