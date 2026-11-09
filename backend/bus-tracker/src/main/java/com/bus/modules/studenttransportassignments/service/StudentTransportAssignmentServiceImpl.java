@@ -52,11 +52,23 @@ public class StudentTransportAssignmentServiceImpl implements StudentTransportAs
 
     private void validateAssignment(StudentTransportAssignmentEntity assignment, Long excludeId) {
         if (assignment.getSchoolId() == null || assignment.getStudentId() == null
-                || assignment.getRouteId() == null || assignment.getPickupStopId() == null
-                || assignment.getDropStopId() == null || assignment.getStartDate() == null) {
-            throw new IllegalArgumentException(
-                    "School, student, route, pickup stop, drop stop and start date are required");
+                || assignment.getRouteId() == null || assignment.getStartDate() == null) {
+            throw new IllegalArgumentException("School, student, route and start date are required");
         }
+
+        boolean requiresPickup = Boolean.TRUE.equals(assignment.getRequiresPickup());
+        boolean requiresDrop = Boolean.TRUE.equals(assignment.getRequiresDrop());
+        if (!requiresPickup && !requiresDrop) {
+            throw new IllegalArgumentException("At least one transport service (pickup or drop) must be selected");
+        }
+        if (requiresPickup && assignment.getPickupStopId() == null) {
+            throw new IllegalArgumentException("Home pickup stop is required when pickup service is selected");
+        }
+        if (!requiresPickup) assignment.setPickupStopId(null);
+        if (requiresDrop && assignment.getDropStopId() == null) {
+            throw new IllegalArgumentException("Home drop stop is required when drop service is selected");
+        }
+        if (!requiresDrop) assignment.setDropStopId(null);
 
         if (assignment.getEndDate() != null
                 && assignment.getEndDate().isBefore(assignment.getStartDate())) {
@@ -65,15 +77,8 @@ public class StudentTransportAssignmentServiceImpl implements StudentTransportAs
 
         StudentsEntity student = studentsRepository.findById(assignment.getStudentId())
                 .orElseThrow(() -> new IllegalArgumentException("Student not found"));
-
         RoutesEntity route = routeRepository.findById(assignment.getRouteId())
                 .orElseThrow(() -> new IllegalArgumentException("Route not found"));
-
-        RouteStopsEntity pickupStop = routeStopsRepository.findById(assignment.getPickupStopId())
-                .orElseThrow(() -> new IllegalArgumentException("Pickup stop not found"));
-
-        RouteStopsEntity dropStop = routeStopsRepository.findById(assignment.getDropStopId())
-                .orElseThrow(() -> new IllegalArgumentException("Drop stop not found"));
 
         if (!"ACTIVE".equals(student.getStatus())) {
             throw new IllegalArgumentException("Only active students can be assigned transport");
@@ -86,29 +91,31 @@ public class StudentTransportAssignmentServiceImpl implements StudentTransportAs
             throw new IllegalArgumentException("Student, route and assignment must belong to the same school");
         }
 
-        if (!pickupStop.getRouteId().equals(route.getId())
-                || !dropStop.getRouteId().equals(route.getId())) {
-            throw new IllegalArgumentException("Both stops must belong to the selected route");
+        RouteStopsEntity homeStop = null;
+        RouteStopsEntity schoolStop = null;
+        if (requiresPickup) {
+            homeStop = routeStopsRepository.findById(assignment.getPickupStopId())
+                    .orElseThrow(() -> new IllegalArgumentException("Home pickup stop not found"));
+            if (!homeStop.getRouteId().equals(route.getId()) || !"ACTIVE".equals(homeStop.getStatus())) {
+                throw new IllegalArgumentException("Home pickup stop must be active and belong to the selected route");
+            }
+            if (!Boolean.TRUE.equals(homeStop.getPickupAllowed())) {
+                throw new IllegalArgumentException("Home stop does not allow pickup");
+            }
         }
-        if (!"ACTIVE".equals(pickupStop.getStatus()) || !"ACTIVE".equals(dropStop.getStatus())) {
-            throw new IllegalArgumentException("Only active route stops can be selected");
+        if (requiresDrop) {
+            schoolStop = routeStopsRepository.findById(assignment.getDropStopId())
+                    .orElseThrow(() -> new IllegalArgumentException("Home drop stop not found"));
+            if (!schoolStop.getRouteId().equals(route.getId()) || !"ACTIVE".equals(schoolStop.getStatus())) {
+                throw new IllegalArgumentException("Home drop stop must be active and belong to the selected route");
+            }
+            if (!Boolean.TRUE.equals(schoolStop.getDropAllowed())) {
+                throw new IllegalArgumentException("Home stop does not allow drop-off");
+            }
         }
-        // pickupStopId represents the student's HOME stop.
-        // dropStopId represents the SCHOOL stop.
-        // Both stops must support both operations because the afternoon trip reverses
-        // the morning journey: Home -> School in the morning, School -> Home in the afternoon.
-        if (!Boolean.TRUE.equals(pickupStop.getPickupAllowed())
-                || !Boolean.TRUE.equals(pickupStop.getDropAllowed())) {
-            throw new IllegalArgumentException("The home stop must allow both pickup and drop-off");
-        }
-        if (!Boolean.TRUE.equals(dropStop.getPickupAllowed())
-                || !Boolean.TRUE.equals(dropStop.getDropAllowed())) {
-            throw new IllegalArgumentException("The school stop must allow both pickup and drop-off");
-        }
-        if (pickupStop.getId().equals(dropStop.getId())) {
+        if (homeStop != null && schoolStop != null && homeStop.getId().equals(schoolStop.getId())) {
             throw new IllegalArgumentException("Pickup and drop stops must be different");
         }
-        // Do not enforce stop order here: the afternoon journey runs in reverse.
 
         if (assignmentRepository.existsOverlappingActiveAssignment(
                 assignment.getStudentId(), assignment.getStartDate(), assignment.getEndDate(), excludeId)) {
