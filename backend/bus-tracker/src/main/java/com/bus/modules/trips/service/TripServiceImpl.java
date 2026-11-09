@@ -324,16 +324,34 @@ public class TripServiceImpl implements TripService {
         boolean allowed = ("PENDING".equals(stop.getStatus()) && Set.of("ARRIVED", "SKIPPED").contains(next))
                 || ("ARRIVED".equals(stop.getStatus()) && "DEPARTED".equals(next));
         if (!allowed && !stop.getStatus().equals(next)) throw new IllegalArgumentException("Invalid stop status transition.");
+
+        if ("PENDING".equals(stop.getStatus()) && Set.of("ARRIVED", "SKIPPED").contains(next)) {
+            ensurePreviousStopsClosed(trip, stop);
+        }
+
         if ("ARRIVED".equals(next) && stop.getArrivedAt() == null) {
-            stop.setArrivedAt(LocalDateTime.now());
             if ("SCHEDULED".equals(trip.getStatus())) {
                 validateTripReadyToStart(trip);
                 trip.setStatus("IN_PROGRESS");
                 trip.setActualStartAt(LocalDateTime.now());
                 tripRepository.save(trip);
             }
+            if (!"IN_PROGRESS".equals(trip.getStatus())) {
+                throw new IllegalArgumentException("Only an in-progress trip can arrive at a stop.");
+            }
+            stop.setArrivedAt(LocalDateTime.now());
         }
-        if ("DEPARTED".equals(next) && stop.getDepartedAt() == null) stop.setDepartedAt(LocalDateTime.now());
+        if ("DEPARTED".equals(next) && stop.getDepartedAt() == null) {
+            boolean unfinishedStudents = tripStudentRepository
+                    .findByTripIdOrderByStopNameAscStudentNameAsc(tripId).stream()
+                    .filter(student -> student.getStopId().equals(stop.getId()))
+                    .anyMatch(student -> !Set.of("PICKUP".equals(trip.getTripType()) ? "BOARDED" : "DROPPED", "ABSENT")
+                            .contains(student.getStatus()));
+            if (unfinishedStudents) {
+                throw new IllegalArgumentException("Update every student at this stop before marking it departed.");
+            }
+            stop.setDepartedAt(LocalDateTime.now());
+        }
         stop.setStatus(next);
         if (request.remarks() != null) stop.setRemarks(request.remarks().trim());
         tripStopRepository.save(stop);
@@ -350,16 +368,41 @@ public class TripServiceImpl implements TripService {
         TripStudentEntity student = tripStudentRepository.findByIdAndTripId(tripStudentId, tripId)
                 .orElseThrow(() -> new IllegalArgumentException("Trip student not found."));
         String next = request.status().trim().toUpperCase();
-        Set<String> allowedStatuses = "PICKUP".equals(trip.getTripType())
-                ? Set.of("WAITING", "BOARDED", "ABSENT")
-                : Set.of("WAITING", "DROPPED", "ABSENT");
-        if (!allowedStatuses.contains(next)) throw new IllegalArgumentException("Invalid student status for this trip type.");
+        if (!"IN_PROGRESS".equals(trip.getStatus())) {
+            throw new IllegalArgumentException("Student status can only be updated while the trip is in progress.");
+        }
+        TripStopEntity studentStop = tripStopRepository.findByIdAndTripId(student.getStopId(), tripId)
+                .orElseThrow(() -> new IllegalArgumentException("The student's assigned trip stop was not found."));
+        if (!"ARRIVED".equals(studentStop.getStatus())) {
+            throw new IllegalArgumentException("Arrive at " + studentStop.getStopName() + " before updating this student's status.");
+        }
+        String completedStatus = "PICKUP".equals(trip.getTripType()) ? "BOARDED" : "DROPPED";
+        if (!Set.of(completedStatus, "ABSENT").contains(next)) {
+            throw new IllegalArgumentException("Student status must be " + completedStatus + " or ABSENT for this trip.");
+        }
+        if (!"WAITING".equals(student.getStatus())) {
+            throw new IllegalArgumentException("A student's trip status has already been recorded and cannot be changed.");
+        }
         if ("BOARDED".equals(next) && student.getBoardedAt() == null) student.setBoardedAt(LocalDateTime.now());
         if ("DROPPED".equals(next) && student.getDroppedAt() == null) student.setDroppedAt(LocalDateTime.now());
         student.setStatus(next);
         if (request.remarks() != null) student.setRemarks(request.remarks().trim());
         tripStudentRepository.save(student);
         return toResponse(trip);
+    }
+
+    /**
+     * Stops must be handled in route order. A later stop cannot be arrived at
+     * or skipped until all earlier stops have departed or been skipped.
+     */
+    private void ensurePreviousStopsClosed(TripEntity trip, TripStopEntity currentStop) {
+        boolean previousStopOpen = tripStopRepository.findByTripIdOrderByStopOrderAsc(trip.getId()).stream()
+                .filter(stop -> stop.getStopOrder() < currentStop.getStopOrder())
+                .anyMatch(stop -> !Set.of("DEPARTED", "SKIPPED").contains(stop.getStatus()));
+        if (previousStopOpen) {
+            throw new IllegalArgumentException("Complete or skip the previous stop before proceeding to "
+                    + currentStop.getStopName() + ".");
+        }
     }
 
     /**
