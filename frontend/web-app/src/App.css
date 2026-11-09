@@ -454,3 +454,8 @@ html[data-theme="dark"] .user-menu-profile{border-color:#405779}
 .weekday-option input{width:15px;height:15px;margin:0;accent-color:#3987df}
 .weekday-option span{display:inline!important;margin:0!important;color:var(--text-main,#273950)!important;font-size:11px!important;font-weight:600}
 html[data-theme="dark"] .weekday-option{background:#101a31;border-color:#33415f}
+
+
+/* Keep long school names readable in the sidebar brand area. */
+.school-brand-name{display:block;min-width:0;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.school-brand-name small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
