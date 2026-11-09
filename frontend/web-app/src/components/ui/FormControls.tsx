@@ -35,14 +35,15 @@ export function DateInput({ value, onChange, ...props }: DateInputProps) {
     const day = i-offset+1
     return day > 0 && day <= days ? day : null
   })
-  const monthLabel = view.toLocaleDateString('en-IN', {month:'long', year:'numeric'})
+  const currentYear = new Date().getFullYear()
+  const years = Array.from({ length: Math.max(141, currentYear + 21 - Math.min(1900, view.getFullYear())) }, (_, index) => Math.min(1900, view.getFullYear()) + index)
   const display = value ? new Date(`${value}T12:00:00`).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : ''
   return <div className="date-input-wrap">
     <button type="button" className="ui-input date-trigger" onClick={() => setOpen(v=>!v)} aria-expanded={open} aria-required={props.required} disabled={props.disabled} id={props.id}>
       <span className={display ? '' : 'date-placeholder'}>{display || props.placeholder || 'Choose a date'}</span><CalendarDays size={17}/>
     </button>
     {open && <div className="date-popover">
-      <div className="date-calendar-head"><button type="button" aria-label="Previous month" onClick={()=>setView(new Date(view.getFullYear(),view.getMonth()-1,1))}><ChevronLeft size={17}/></button><strong>{monthLabel}</strong><button type="button" aria-label="Next month" onClick={()=>setView(new Date(view.getFullYear(),view.getMonth()+1,1))}><ChevronRight size={17}/></button></div>
+      <div className="date-calendar-head"><button type="button" aria-label="Previous month" onClick={()=>setView(new Date(view.getFullYear(),view.getMonth()-1,1))}><ChevronLeft size={17}/></button><div className="date-calendar-selectors"><select aria-label="Select month" value={view.getMonth()} onChange={event=>setView(new Date(view.getFullYear(),Number(event.target.value),1))}>{Array.from({length:12},(_,month)=><option key={month} value={month}>{new Date(2000,month,1).toLocaleDateString("en-IN",{month:"long"})}</option>)}</select><select aria-label="Select year" value={view.getFullYear()} onChange={event=>setView(new Date(Number(event.target.value),view.getMonth(),1))}>{years.map(year=><option key={year} value={year}>{year}</option>)}</select></div><button type="button" aria-label="Next month" onClick={()=>setView(new Date(view.getFullYear(),view.getMonth()+1,1))}><ChevronRight size={17}/></button></div>
       <div className="date-calendar-grid">{['Mo','Tu','We','Th','Fr','Sa','Su'].map(day=><span className="date-weekday" key={day}>{day}</span>)}{cells.map((day,index)=>day ? <button type="button" key={index} className={value===toIso(new Date(view.getFullYear(),view.getMonth(),day))?'selected':''} onClick={()=>{onChange(toIso(new Date(view.getFullYear(),view.getMonth(),day)));setOpen(false)}}>{day}</button> : <span key={index}/>)}</div>
       <div className="date-calendar-foot"><button type="button" onClick={()=>{onChange(toIso(new Date()));setView(new Date());setOpen(false)}}>Today</button><button type="button" onClick={()=>{onChange('');setOpen(false)}}>Clear date</button></div>
     </div>}
