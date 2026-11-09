@@ -1,7 +1,7 @@
 import type { FormEvent } from 'react'
 import { api } from '../../pages/LegacyPages'
 import { useCallback, useEffect, useState } from 'react'
-import type { School, Student, SchoolRoute, RouteStop, StudentTransportAssignment, StudentTransportAssignmentForm } from '../../pages/LegacyPages'
+import type { School, Student, SchoolRoute, RouteStop, Bus, BusAssignment, StudentTransportAssignment, StudentTransportAssignmentForm } from '../../pages/LegacyPages'
 import { emptyStudentTransportAssignment, downloadExcelReport, downloadPdfReport } from '../../pages/LegacyPages'
 import { MoreVertical, RefreshCw, Users } from 'lucide-react'
 import { DateInput, SearchInput, SelectInput, TextArea } from '../../components/ui/FormControls'
@@ -12,6 +12,8 @@ export function StudentTransportAssignmentsPage({ token, setError, setNotice }: 
   const [routes, setRoutes] = useState<SchoolRoute[]>([])
   const [stops, setStops] = useState<RouteStop[]>([])
   const [schools, setSchools] = useState<School[]>([])
+  const [buses, setBuses] = useState<Bus[]>([])
+  const [busAssignments, setBusAssignments] = useState<BusAssignment[]>([])
   const [form, setForm] = useState<StudentTransportAssignmentForm>(emptyStudentTransportAssignment)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [showForm, setShowForm] = useState(false)
@@ -23,14 +25,16 @@ export function StudentTransportAssignmentsPage({ token, setError, setNotice }: 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [assignmentRows, studentRows, routeRows, stopRows, schoolRows] = await Promise.all([
+      const [assignmentRows, studentRows, routeRows, stopRows, schoolRows, busRows, busAssignmentRows] = await Promise.all([
         api<StudentTransportAssignment[]>('/student-transport-assignment', token),
         api<Student[]>('/stu', token),
         api<SchoolRoute[]>('/route', token),
         api<RouteStop[]>('/route-stop', token),
         api<School[]>('/school', token).catch(() => [] as School[]),
+        api<Bus[]>('/bus', token),
+        api<BusAssignment[]>('/bus-assignment', token),
       ])
-      setAssignments(assignmentRows); setStudents(studentRows); setRoutes(routeRows); setStops(stopRows); setSchools(schoolRows)
+      setAssignments(assignmentRows); setStudents(studentRows); setRoutes(routeRows); setStops(stopRows); setSchools(schoolRows); setBuses(busRows); setBusAssignments(busAssignmentRows)
       setForm(current => current.schoolId || !schoolRows.length ? current : { ...current, schoolId: schoolRows[0].id })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to load student transport assignments.')
@@ -59,6 +63,16 @@ export function StudentTransportAssignmentsPage({ token, setError, setNotice }: 
     return x ? x.stopName : 'Unavailable stop'
   }
   const schoolLabel = (id: number) => schools.find(row => row.id === id)?.name || '—'
+  const busAssignmentLabel = (id: number | null) => {
+    if (!id) return 'Auto allocation unavailable'
+    const assignment = busAssignments.find(row => row.id === id)
+    const bus = assignment ? buses.find(row => row.id === assignment.busId) : undefined
+    return bus ? `${bus.busNumber} · ${bus.registrationNumber}` : 'Bus assignment unavailable'
+  }
+  const availableBusAssignments = busAssignments.filter(item => item.status === 'ACTIVE'
+    && item.schoolId === Number(form.schoolId) && item.routeId === Number(form.routeId)
+    && (!form.startDate || item.startDate <= form.startDate)
+    && (!item.endDate || !form.endDate || item.endDate >= form.endDate))
 
   const filtered = assignments.filter(item => [
     studentLabel(item.studentId), routeLabel(item.routeId), stopLabel(item.pickupStopId), stopLabel(item.dropStopId),
@@ -75,6 +89,7 @@ export function StudentTransportAssignmentsPage({ token, setError, setNotice }: 
     setForm({
       schoolId: item.schoolId, studentId: item.studentId, routeId: item.routeId,
       pickupStopId: item.pickupStopId, dropStopId: item.dropStopId,
+      morningBusAssignmentId: item.morningBusAssignmentId ?? null, afternoonBusAssignmentId: item.afternoonBusAssignmentId ?? null,
       requiresPickup: item.requiresPickup ?? true, requiresDrop: item.requiresDrop ?? true,
       startDate: item.startDate, endDate: item.endDate || '', remarks: item.remarks || '',
     })
@@ -132,14 +147,16 @@ export function StudentTransportAssignmentsPage({ token, setError, setNotice }: 
       <label className="field"><span>Afternoon drop service *</span><SelectInput required value={form.requiresDrop ? 'true' : 'false'} onChange={e => setForm({ ...form, requiresDrop: e.target.value === 'true' })}><option value="true">Required</option><option value="false">Not required</option></SelectInput></label>
       <label className="field"><span>Home stop *</span><SelectInput required value={form.pickupStopId || ''} onChange={e => setForm({ ...form, pickupStopId: Number(e.target.value) })}><option value="">Select student's home stop</option>{homeStops.map(x => <option key={x.id} value={x.id}>{x.stopOrder}. {x.stopName}{x.stopAddress ? ` — ${x.stopAddress}` : ''}</option>)}</SelectInput></label>
       <label className="field"><span>School stop *</span><SelectInput required value={form.dropStopId || ''} onChange={e => setForm({ ...form, dropStopId: Number(e.target.value) })}><option value="">Select school stop</option>{schoolStops.map(x => <option key={x.id} value={x.id}>{x.stopOrder}. {x.stopName}{x.stopAddress ? ` — ${x.stopAddress}` : ''}</option>)}</SelectInput></label>
-      <label className="field"><span>Start date *</span><DateInput value={form.startDate} onChange={value => setForm({ ...form, startDate: value })}/></label>
+      <label className="field"><span>Morning bus (optional)</span><SelectInput value={form.morningBusAssignmentId || ''} onChange={e => setForm({ ...form, morningBusAssignmentId: e.target.value ? Number(e.target.value) : null })}><option value="">Auto allocate by stop and capacity</option>{availableBusAssignments.map(item => { const bus = buses.find(x => x.id === item.busId); return <option key={item.id} value={item.id}>{bus ? `${bus.busNumber} · ${bus.registrationNumber}` : `Bus assignment #${item.id}`}</option> })}</SelectInput></label>
+      <label className="field"><span>Afternoon bus (optional)</span><SelectInput value={form.afternoonBusAssignmentId || ''} onChange={e => setForm({ ...form, afternoonBusAssignmentId: e.target.value ? Number(e.target.value) : null })}><option value="">Auto allocate by stop and capacity</option>{availableBusAssignments.map(item => { const bus = buses.find(x => x.id === item.busId); return <option key={item.id} value={item.id}>{bus ? `${bus.busNumber} · ${bus.registrationNumber}` : `Bus assignment #${item.id}`}</option> })}</SelectInput></label>
+      <label className="field"><span>Start date *</span><DateInput value={form.startDate} onChange={value => setForm({ ...form, startDate: value, morningBusAssignmentId: null, afternoonBusAssignmentId: null })}/></label>
       <label className="field"><span>End date</span><DateInput value={form.endDate || ''} onChange={value => setForm({ ...form, endDate: value })}/></label>
       <label className="field field-wide"><span>Remarks</span><TextArea rows={2} maxLength={500} value={form.remarks || ''} onChange={e => setForm({ ...form, remarks: e.target.value })} placeholder="Optional assignment notes"/></label>
     </div><div className="form-actions"><button type="button" className="button secondary" onClick={() => { setShowForm(false); setEditingId(null) }}>Cancel</button><button className="button primary" disabled={busy || !schools.length || !availableStudents.length || !availableRoutes.length || homeStops.length === 0 || schoolStops.length === 0 || (!form.requiresPickup && !form.requiresDrop)}>{busy ? 'Saving…' : editingId ? 'Update assignment' : 'Save assignment'}</button></div>{(!availableStudents.length || !availableRoutes.length || homeStops.length === 0 || schoolStops.length === 0) && <p className="student-subtext">Select an active student and route, then choose a home stop and school stop with permissions matching the selected transport services.</p>}</form></section>}
     {!showForm && <section className="panel"><div className="panel-heading student-list-heading"><div><span className="section-kicker">STUDENT TRANSPORT</span><h3>Student assignments <small className="count-label">{filtered.length}</small></h3></div><div className="table-header-tools"><SearchInput className="student-search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search student, route or stop…"/><button type="button" className="button secondary report-button" onClick={() => downloadExcelReport('student-transport-assignments.xls', 'Student Transport Assignments Report', ['Student', 'Route', 'Home stop', 'School stop', 'Services', 'School', 'Start date', 'End date', 'Status'], filtered.map(x => [studentLabel(x.studentId), routeLabel(x.routeId), stopLabel(x.pickupStopId), stopLabel(x.dropStopId), [x.requiresPickup ? 'Morning pickup' : '', x.requiresDrop ? 'Afternoon drop' : ''].filter(Boolean).join(' + '), schoolLabel(x.schoolId), x.startDate, x.endDate || 'Ongoing', x.status]))}>Export Excel</button><button type="button" className="button secondary report-button" onClick={() => downloadPdfReport('Student Transport Assignments Report', ['Student', 'Route', 'Home stop', 'School stop', 'Services', 'Start', 'End', 'Status'], filtered.map(x => [studentLabel(x.studentId), routeLabel(x.routeId), stopLabel(x.pickupStopId), stopLabel(x.dropStopId), [x.requiresPickup ? 'Morning pickup' : '', x.requiresDrop ? 'Afternoon drop' : ''].filter(Boolean).join(' + '), x.startDate, x.endDate || 'Ongoing', x.status]))}>Export PDF</button></div></div>
-    <div className="table-wrap"><table><thead><tr><th className="row-actions-heading" aria-label="Row actions"></th><th>Student</th><th>Route</th><th>Home stop</th><th>School stop</th><th>Services</th><th>School</th><th>Start date</th><th>End date</th><th>Status</th></tr></thead><tbody>
-      {filtered.map(item => <tr key={item.id}><td className="row-actions-cell"><div className="row-action-menu"><button type="button" className="row-action-trigger" aria-label="Assignment actions" aria-haspopup="true" aria-expanded={openActionMenuId === item.id} onClick={() => setOpenActionMenuId(current => current === item.id ? null : item.id)}><MoreVertical size={18}/></button>{openActionMenuId === item.id && <div className="row-action-dropdown" role="menu"><button type="button" role="menuitem" onClick={() => { setOpenActionMenuId(null); edit(item) }}>Edit assignment</button>{item.status === 'ACTIVE' && <button type="button" role="menuitem" className="danger" onClick={() => { setOpenActionMenuId(null); void remove(item) }}>Delete assignment</button>}</div>}</div></td><td><strong>{studentLabel(item.studentId)}</strong></td><td>{routeLabel(item.routeId)}</td><td>{stopLabel(item.pickupStopId)}</td><td>{stopLabel(item.dropStopId)}</td><td>{[item.requiresPickup ? 'Morning pickup' : '', item.requiresDrop ? 'Afternoon drop' : ''].filter(Boolean).join(' + ')}</td><td>{schoolLabel(item.schoolId)}</td><td>{item.startDate}</td><td>{item.endDate || 'Ongoing'}</td><td><span className={`status-pill ${item.status === 'ACTIVE' ? 'active' : 'inactive'}`}>{item.status}</span></td></tr>)}
-      {loading && <tr><td colSpan={10} className="empty-cell">Loading student assignments…</td></tr>}{!loading && filtered.length === 0 && <tr><td colSpan={10} className="empty-cell">{search ? 'No assignments match your search.' : 'No student transport assignments found. Assign a student to a route to get started.'}</td></tr>}
+    <div className="table-wrap"><table><thead><tr><th className="row-actions-heading" aria-label="Row actions"></th><th>Student</th><th>Route</th><th>Home stop</th><th>School stop</th><th>Morning bus</th><th>Afternoon bus</th><th>Services</th><th>School</th><th>Start date</th><th>End date</th><th>Status</th></tr></thead><tbody>
+      {filtered.map(item => <tr key={item.id}><td className="row-actions-cell"><div className="row-action-menu"><button type="button" className="row-action-trigger" aria-label="Assignment actions" aria-haspopup="true" aria-expanded={openActionMenuId === item.id} onClick={() => setOpenActionMenuId(current => current === item.id ? null : item.id)}><MoreVertical size={18}/></button>{openActionMenuId === item.id && <div className="row-action-dropdown" role="menu"><button type="button" role="menuitem" onClick={() => { setOpenActionMenuId(null); edit(item) }}>Edit assignment</button>{item.status === 'ACTIVE' && <button type="button" role="menuitem" className="danger" onClick={() => { setOpenActionMenuId(null); void remove(item) }}>Delete assignment</button>}</div>}</div></td><td><strong>{studentLabel(item.studentId)}</strong></td><td>{routeLabel(item.routeId)}</td><td>{stopLabel(item.pickupStopId)}</td><td>{stopLabel(item.dropStopId)}</td><td>{item.requiresPickup ? busAssignmentLabel(item.morningBusAssignmentId) : '—'}</td><td>{item.requiresDrop ? busAssignmentLabel(item.afternoonBusAssignmentId) : '—'}</td><td>{[item.requiresPickup ? 'Morning pickup' : '', item.requiresDrop ? 'Afternoon drop' : ''].filter(Boolean).join(' + ')}</td><td>{schoolLabel(item.schoolId)}</td><td>{item.startDate}</td><td>{item.endDate || 'Ongoing'}</td><td><span className={`status-pill ${item.status === 'ACTIVE' ? 'active' : 'inactive'}`}>{item.status}</span></td></tr>)}
+      {loading && <tr><td colSpan={12} className="empty-cell">Loading student assignments…</td></tr>}{!loading && filtered.length === 0 && <tr><td colSpan={12} className="empty-cell">{search ? 'No assignments match your search.' : 'No student transport assignments found. Assign a student to a route to get started.'}</td></tr>}
     </tbody></table></div></section>}
     {!showForm && <p className="footnote">Morning pickup and afternoon drop-off are independently optional. Home and school stops remain configured as journey endpoints; only the permissions needed for the selected service are required. Deleting an assignment deactivates it and preserves its history.</p>}
   </>
