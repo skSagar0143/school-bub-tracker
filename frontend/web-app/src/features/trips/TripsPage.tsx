@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { BusFront, CalendarClock, MoreVertical, RefreshCw, Route as RouteIcon } from 'lucide-react'
 import { DateInput, SearchInput } from '../../components/ui/FormControls'
 import { api, downloadExcelReport, downloadPdfReport } from '../../pages/LegacyPages'
-import type { Bus, BusAssignment, School, SchoolDriver, SchoolRoute } from '../../pages/LegacyPages'
+import type { Bus, School, SchoolDriver, SchoolRoute } from '../../pages/LegacyPages'
 
 type TripStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
 type TripStopStatus = 'PENDING' | 'ARRIVED' | 'DEPARTED' | 'SKIPPED'
