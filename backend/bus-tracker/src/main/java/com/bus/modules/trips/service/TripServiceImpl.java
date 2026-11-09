@@ -20,6 +20,8 @@ import com.bus.modules.busassignments.entity.BusAssignmentEntity;
 import com.bus.modules.busassignments.repository.BusAssignmentRepository;
 import com.bus.modules.busassignmentstops.entity.BusAssignmentStopEntity;
 import com.bus.modules.busassignmentstops.repository.BusAssignmentStopRepository;
+import com.bus.modules.driverabsences.entity.DriverAbsenceEntity;
+import com.bus.modules.driverabsences.repository.DriverAbsenceRepository;
 import com.bus.modules.driverassignments.entity.DriverAssignmentEntity;
 import com.bus.modules.driverassignments.repository.DriverAssignmentRepository;
 import com.bus.modules.drivers.entity.DriversEntity;
@@ -67,6 +69,7 @@ public class TripServiceImpl implements TripService {
     private final StudentsRepository studentsRepository;
     private final DriverAssignmentRepository driverAssignmentRepository;
     private final DriversRepository driversRepository;
+    private final DriverAbsenceRepository driverAbsenceRepository;
     private final RouteRepository routeRepository;
     private final BusRepository busRepository;
     private final SchoolRepository schoolRepository;
@@ -136,8 +139,15 @@ public class TripServiceImpl implements TripService {
             trip.setBusId(bus.getId());
             trip.setRouteId(assignment.getRouteId());
             if (!activeDrivers.isEmpty()) {
-                trip.setDriverAssignmentId(activeDrivers.get(0).getId());
-                trip.setDriverId(activeDrivers.get(0).getDriverId());
+                DriverAssignmentEntity originalAssignment = activeDrivers.get(0);
+                trip.setDriverAssignmentId(originalAssignment.getId());
+                Long assignedDriverId = originalAssignment.getDriverId();
+                DriverAbsenceEntity absence = driverAbsenceRepository
+                        .findFirstBySchoolIdAndDriverIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                                request.schoolId(), assignedDriverId, "ACTIVE", date, date)
+                        .orElse(null);
+                trip.setDriverId(absence != null && absence.getReplacementDriverId() != null
+                        ? absence.getReplacementDriverId() : assignedDriverId);
             }
             trip.setTripDate(date);
             trip.setTripType(schedule.getTripType());
@@ -450,17 +460,26 @@ public class TripServiceImpl implements TripService {
                 .filter(item -> "ACTIVE".equalsIgnoreCase(item.getStatus()))
                 .filter(item -> item.getSchoolId().equals(trip.getSchoolId()))
                 .filter(item -> item.getBusId().equals(bus.getId()))
-                .filter(item -> item.getDriverId().equals(trip.getDriverId()))
                 .filter(item -> !item.getStartDate().isAfter(trip.getTripDate()))
                 .filter(item -> item.getEndDate() == null || !item.getEndDate().isBefore(trip.getTripDate()))
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Trip cannot start: the driver assignment is missing, inactive, or not valid for this trip date."));
 
-        DriversEntity driver = driversRepository.findById(driverAssignment.getDriverId())
+        boolean isOriginalDriver = driverAssignment.getDriverId().equals(trip.getDriverId());
+        boolean isApprovedReplacement = !isOriginalDriver && driverAbsenceRepository
+                .findFirstBySchoolIdAndDriverIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                        trip.getSchoolId(), driverAssignment.getDriverId(), "ACTIVE", trip.getTripDate(), trip.getTripDate())
+                .map(absence -> trip.getDriverId().equals(absence.getReplacementDriverId()))
+                .orElse(false);
+        if (!isOriginalDriver && !isApprovedReplacement) {
+            throw new IllegalArgumentException("Trip cannot start: the selected driver is not the assigned driver or an approved replacement.");
+        }
+
+        DriversEntity driver = driversRepository.findById(trip.getDriverId())
                 .filter(item -> item.getSchoolId().equals(trip.getSchoolId()))
                 .filter(item -> "ACTIVE".equalsIgnoreCase(item.getStatus()))
                 .orElseThrow(() -> new IllegalArgumentException(
-                        "Trip cannot start: the assigned driver is missing or inactive."));
+                        "Trip cannot start: the assigned or replacement driver is missing or inactive."));
 
         List<TripStopEntity> stops = tripStopRepository.findByTripIdOrderByStopOrderAsc(trip.getId());
         if (stops.isEmpty()) {
