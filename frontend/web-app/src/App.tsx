@@ -31,6 +31,7 @@ function readCachedMenus(currentUser: LoginUser): CachedMenuResponse | null {
       cached.role !== currentUser.role ||
       !Array.isArray(cached.menus)
     ) return null
+    cached.menus = withStudentMenu(cached.menus, currentUser.role)
     return cached
   } catch {
     localStorage.removeItem(menuCacheKey(currentUser))
