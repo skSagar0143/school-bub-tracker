@@ -118,6 +118,11 @@ export async function api<T>(path: string, token: string, options: RequestInit =
     ...options,
     headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...options.headers },
   })
+  if (response.status === 401 && token) {
+    // Let the application clear the expired session and return to the login page.
+    window.dispatchEvent(new Event('schoolroute:session-expired'))
+    throw new Error('SESSION_EXPIRED')
+  }
   if (!response.ok) {
     let message = `Request failed (${response.status})`
     try { const body = await response.json(); message = body.message || message } catch { /* keep fallback */ }
