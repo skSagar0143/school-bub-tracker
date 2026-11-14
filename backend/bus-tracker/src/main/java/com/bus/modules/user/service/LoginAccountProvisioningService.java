@@ -38,6 +38,7 @@ public class LoginAccountProvisioningService {
     private final DriversRepository driversRepository;
     private final SchoolRepository schoolRepository;
     private final PasswordEncoder passwordEncoder;
+    private final CredentialEncryptionService credentialEncryptionService;
 
     public List<GeneratedLoginCredentialResponse> generateAccounts(GenerateLoginAccountsRequest request) {
         List<Long> studentIds = request.studentIds() == null ? List.of() : request.studentIds().stream().distinct().toList();
@@ -72,6 +73,7 @@ public class LoginAccountProvisioningService {
             user.setLoginId(loginId);
             user.setEmail(null);
             user.setPasswordHash(passwordEncoder.encode(password));
+            user.setPasswordDisplayEncrypted(credentialEncryptionService.encrypt(password));
             user.setRole(UserRole.STUDENT);
             user.setEnabled(true);
             user = userRepository.saveAndFlush(user);
