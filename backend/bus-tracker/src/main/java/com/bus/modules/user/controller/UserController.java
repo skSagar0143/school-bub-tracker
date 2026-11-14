@@ -11,6 +11,8 @@ import com.bus.modules.user.dto.CreateUserRequest;
 import com.bus.modules.user.dto.UpdateUserRequest;
 import com.bus.modules.user.dto.UserResponse;
 import com.bus.modules.user.dto.UserStatusRequest;
+import com.bus.modules.user.dto.ResetPasswordResponse;
+import com.bus.modules.user.entity.UserRole;
 import com.bus.modules.user.service.UserService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -37,8 +39,8 @@ public class UserController {
 
     @GetMapping
     @Operation(summary = "List Driver, Student and Parent accounts")
-    public List<UserResponse> getAll() {
-        return userService.getUsers().stream().map(UserResponse::from).toList();
+    public List<UserResponse> getAll(@RequestParam(required = false) UserRole role) {
+        return userService.getUsers(role).stream().map(UserResponse::from).toList();
     }
 
     @GetMapping("/{id}")
@@ -58,6 +60,12 @@ public class UserController {
     @Operation(summary = "Delete a user account (soft delete; disables sign-in)")
     public void delete(@PathVariable UUID id) {
         userService.deleteUser(id);
+    }
+
+    @PostMapping("/{id}/reset-password")
+    @Operation(summary = "Reset a driver or student password and return the one-time temporary password")
+    public ResetPasswordResponse resetPassword(@PathVariable UUID id) {
+        return userService.resetPassword(id);
     }
 
     @PatchMapping("/{id}/status")
