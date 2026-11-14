@@ -1,3 +1,4 @@
+import { PortalActionMenu } from '../../components/ui/PortalActionMenu'
 import type { FormEvent } from 'react'
 import { api } from '../../pages/LegacyPages'
 import { useCallback, useEffect, useState } from 'react'
@@ -160,7 +161,7 @@ export function BusesPage({ token, setError, setNotice }: { token: string; setEr
           <thead><tr><th className="row-actions-heading">Actions</th><th>Bus</th><th>Registration</th><th>Model</th><th>Capacity</th><th>Fuel / Type</th><th>School</th><th>Status</th></tr></thead>
           <tbody>
             {filteredBuses.map(bus => <tr key={bus.id}>
-              <td className="row-actions-cell"><div className="row-action-menu"><button type="button" className="row-action-trigger" aria-label={`Actions for ${bus.busNumber}`} aria-haspopup="true" aria-expanded={openActionMenuId === bus.id} onClick={() => setOpenActionMenuId(current => current === bus.id ? null : bus.id)}><MoreVertical size={18} /></button>{openActionMenuId === bus.id && <div className="row-action-dropdown" role="menu"><button type="button" role="menuitem" onClick={() => { setOpenActionMenuId(null); editBus(bus) }}>Edit bus</button>{bus.status === 'ACTIVE' && <button type="button" role="menuitem" className="danger" onClick={() => { setOpenActionMenuId(null); void deleteBus(bus) }}>Delete bus</button>}</div>}</div></td>
+              <td className="row-actions-cell"><div className="row-action-menu"><PortalActionMenu label="Row actions" open={openActionMenuId === bus.id} onOpenChange={open => setOpenActionMenuId(open ? bus.id : null)}><button type="button" role="menuitem" onClick={() => { setOpenActionMenuId(null); editBus(bus) }}>Edit bus</button>{bus.status === 'ACTIVE' && <button type="button" role="menuitem" className="danger" onClick={() => { setOpenActionMenuId(null); void deleteBus(bus) }}>Delete bus</button>}</PortalActionMenu></td>
               <td><strong>{bus.busNumber}</strong></td>
               <td>{bus.registrationNumber}</td>
               <td>{bus.model || '—'}</td>
