@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { KeyRound, MoreVertical, RefreshCw, UserRoundCheck, UserRoundX } from 'lucide-react'
 import { api } from '../../pages/LegacyPages'
 
@@ -24,6 +25,31 @@ export function UsersPage({ token, setError, setNotice }: {
   const [busyId, setBusyId] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [openActionId, setOpenActionId] = useState<string | null>(null)
+  const [actionMenuPosition, setActionMenuPosition] = useState<{ top: number; left: number } | null>(null)
+  const actionDropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!openActionId) return
+
+    function handleOutsideClick(event: PointerEvent) {
+      const target = event.target
+      if (!(target instanceof Element)) return
+      if (target.closest('.row-action-trigger')) return
+      if (actionDropdownRef.current?.contains(target)) return
+      setOpenActionId(null)
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') setOpenActionId(null)
+    }
+
+    document.addEventListener('pointerdown', handleOutsideClick)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', handleOutsideClick)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [openActionId])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -86,11 +112,18 @@ export function UsersPage({ token, setError, setNotice }: {
               <td className="select-column"><input className="record-select-checkbox" type="checkbox" aria-label={`Select ${account.fullName}`} checked={selectedIds.includes(account.id)} onChange={event => setSelectedIds(current => event.target.checked ? [...current, account.id] : current.filter(id => id !== account.id))}/></td>
               <td className="row-actions-cell">
                 <div className="row-action-menu">
-                  <button type="button" className="row-action-trigger" aria-label={`Actions for ${account.fullName}`} aria-haspopup="true" aria-expanded={openActionId === account.id} onClick={() => setOpenActionId(current => current === account.id ? null : account.id)}><MoreVertical size={18}/></button>
-                  {openActionId === account.id && <div className="row-action-dropdown" role="menu">
-                    <button type="button" role="menuitem" disabled={busyId === account.id} onClick={() => void resetPassword(account)}><KeyRound size={14}/> Reset password</button>
-                    <button type="button" role="menuitem" disabled={busyId === account.id} onClick={() => void toggleStatus(account)}>{account.enabled ? <UserRoundX size={14}/> : <UserRoundCheck size={14}/>} {account.enabled ? 'Deactivate' : 'Activate'}</button>
-                  </div>}
+                  <button type="button" className="row-action-trigger" aria-label={`Actions for ${account.fullName}`} aria-haspopup="true" aria-expanded={openActionId === account.id} onClick={event => {
+                    if (openActionId === account.id) {
+                      setOpenActionId(null)
+                      return
+                    }
+                    const rect = event.currentTarget.getBoundingClientRect()
+                    setActionMenuPosition({
+                      top: Math.min(rect.bottom + 6, window.innerHeight - 112),
+                      left: Math.max(8, Math.min(rect.left, window.innerWidth - 190)),
+                    })
+                    setOpenActionId(account.id)
+                  }}><MoreVertical size={18}/></button>
                 </div>
               </td>
               <td><strong>{account.fullName}</strong><div className="student-subtext">{account.enabled ? 'Active' : 'Deactivated'}</div></td>
@@ -103,5 +136,21 @@ export function UsersPage({ token, setError, setNotice }: {
         </table>
       </div>
     </section>
+    {openActionId && actionMenuPosition && (() => {
+      const account = rows.find(row => row.id === openActionId)
+      if (!account) return null
+      return createPortal(
+        <div
+          ref={actionDropdownRef}
+          className="row-action-dropdown"
+          role="menu"
+          style={{ position: 'fixed', top: actionMenuPosition.top, left: actionMenuPosition.left, zIndex: 10000 }}
+        >
+          <button type="button" role="menuitem" disabled={busyId === account.id} onClick={() => void resetPassword(account)}><KeyRound size={14}/> Reset password</button>
+          <button type="button" role="menuitem" disabled={busyId === account.id} onClick={() => void toggleStatus(account)}>{account.enabled ? <UserRoundX size={14}/> : <UserRoundCheck size={14}/>} {account.enabled ? 'Deactivate' : 'Activate'}</button>
+        </div>,
+        document.body
+      )
+    })()}
   </>
 }
