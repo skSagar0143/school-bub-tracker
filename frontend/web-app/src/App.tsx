@@ -183,6 +183,16 @@ function App() {
     navigate('/login')
   }
 
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      // Expired access token: clear the local session and show the login page.
+      logout()
+      setToast(null)
+    }
+    window.addEventListener('schoolroute:session-expired', handleSessionExpired)
+    return () => window.removeEventListener('schoolroute:session-expired', handleSessionExpired)
+  }, [user])
+
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setLoginBusy(true); setError('')
