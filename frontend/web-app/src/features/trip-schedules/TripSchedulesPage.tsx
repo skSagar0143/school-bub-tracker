@@ -1,3 +1,4 @@
+import { PortalActionMenu } from '../../components/ui/PortalActionMenu'
 import type { FormEvent } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CalendarClock, MoreVertical, RefreshCw } from 'lucide-react'
@@ -369,14 +370,10 @@ export function TripSchedulesPage({ token, setError, setNotice }: Props) {
             {filteredSchedules.map(item => <tr key={item.id}>
               <td className="row-actions-cell">
                 <div className="row-action-menu">
-                  <button type="button" className="row-action-trigger" aria-label="Trip schedule actions" aria-haspopup="true" aria-expanded={openActionMenuId === item.id} onClick={() => setOpenActionMenuId(current => current === item.id ? null : item.id)}>
-                    <MoreVertical size={18} />
-                  </button>
-                  {openActionMenuId === item.id && <div className="row-action-dropdown" role="menu">
+                  <PortalActionMenu label="Row actions" open={openActionMenuId === item.id} onOpenChange={open => setOpenActionMenuId(open ? item.id : null)}>
                     <button type="button" role="menuitem" onClick={() => { setOpenActionMenuId(null); editSchedule(item) }}>Edit schedule</button>
                     {item.status === 'ACTIVE' && <button type="button" role="menuitem" className="danger" onClick={() => { setOpenActionMenuId(null); void deactivate(item) }}>Deactivate schedule</button>}
-                  </div>}
-                </div>
+                  </PortalActionMenu>
               </td>
               <td><strong>{assignmentLabel(item.busAssignmentId)}</strong></td>
               <td><span className={`status-pill ${item.tripType === 'PICKUP' ? 'active' : 'inactive'}`}>{item.tripType === 'PICKUP' ? 'Morning pickup' : 'Afternoon drop'}</span></td>
