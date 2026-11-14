@@ -86,6 +86,24 @@ export function StudentsPage({ token, setError, setNotice }: { token: string; se
     }
   }
 
+
+  async function createSelectedLogins() {
+    const selected = students.filter(student => selectedIds.includes(student.id) && student.status === 'ACTIVE' && !student.userId)
+    if (!selected.length) { setError('Select active students without an existing login account.'); return }
+    setBusy(true); setError(''); setNotice('')
+    try {
+      const result = await api<Array<{ fullName: string; loginId: string; temporaryPassword: string }>>('/user/login-accounts/generate', token, {
+        method: 'POST', body: JSON.stringify({ studentIds: selected.map(student => student.id), driverIds: [] }),
+      })
+      window.alert(result.map(row => row.fullName + '\\nLogin ID: ' + row.loginId + '\\nTemporary password: ' + row.temporaryPassword).join('\\n\\n'))
+      setSelectedIds([])
+      setNotice('Created ' + result.length + ' student login account(s). Save the temporary credentials now.')
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to create student login accounts.')
+    } finally { setBusy(false) }
+  }
+
   async function deleteSelectedStudents() {
     const selected = students.filter(student => selectedIds.includes(student.id) && student.status === 'ACTIVE')
     if (!selected.length) return
@@ -123,6 +141,7 @@ export function StudentsPage({ token, setError, setNotice }: { token: string; se
       <div><h2>Student management</h2><p>Add, update and manage students. Select students to perform bulk actions.</p></div>
       <div className="page-header-actions">
         <button className="button primary" onClick={openCreateForm}><Users size={15} /> Add Students</button>
+        <button className="button secondary" disabled={selectedIds.length === 0 || busy} onClick={() => void createSelectedLogins()}><Users size={15} /> Create Login ({selectedIds.length})</button>
         <button className="button secondary" disabled={selectedIds.length === 0} onClick={() => setNotice('Bus assignment UI is ready; it will be connected when the backend student-to-bus assignment API is added.')}><BusFront size={15} /> Bus Assign ({selectedIds.length})</button>
         <button className="button danger" disabled={selectedIds.length === 0} onClick={() => void deleteSelectedStudents()}><Users size={15} /> Delete Students ({selectedIds.length})</button>
         <button className="button secondary" onClick={() => void load()} disabled={loading}><RefreshCw size={14} /> Refresh</button>
@@ -166,10 +185,10 @@ export function StudentsPage({ token, setError, setNotice }: { token: string; se
         </div>
       </div>
       <div className="table-wrap"><table>
-        <thead><tr><th className="select-column"><input aria-label="Select all active students" type="checkbox" checked={filteredStudents.filter(student => student.status === 'ACTIVE').length > 0 && filteredStudents.filter(student => student.status === 'ACTIVE').every(student => selectedIds.includes(student.id))} onChange={event => { const visibleActiveIds = filteredStudents.filter(student => student.status === 'ACTIVE').map(student => student.id); setSelectedIds(event.target.checked ? Array.from(new Set([...selectedIds, ...visibleActiveIds])) : selectedIds.filter(id => !visibleActiveIds.includes(id))) }} /></th><th className="row-actions-heading">Actions</th><th>Student</th><th>Admission no.</th><th>Class</th><th>Parent / guardian</th><th>Parent phone</th><th>Status</th></tr></thead>
+        <thead><tr><th className="select-column"><input aria-label="Select all active students" type="checkbox" checked={filteredStudents.filter(student => student.status === 'ACTIVE' && !student.userId).length > 0 && filteredStudents.filter(student => student.status === 'ACTIVE' && !student.userId).every(student => selectedIds.includes(student.id))} onChange={event => { const visibleActiveIds = filteredStudents.filter(student => student.status === 'ACTIVE' && !student.userId).map(student => student.id); setSelectedIds(event.target.checked ? Array.from(new Set([...selectedIds, ...visibleActiveIds])) : selectedIds.filter(id => !visibleActiveIds.includes(id))) }} /></th><th className="row-actions-heading">Actions</th><th>Student</th><th>Admission no.</th><th>Class</th><th>Parent / guardian</th><th>Parent phone</th><th>Status</th></tr></thead>
         <tbody>
           {filteredStudents.map(student => <tr key={student.id}>
-            <td className="select-column"><input aria-label={`Select ${student.firstName}`} type="checkbox" disabled={student.status !== 'ACTIVE'} checked={selectedIds.includes(student.id)} onChange={event => setSelectedIds(current => event.target.checked ? [...current, student.id] : current.filter(id => id !== student.id))} /></td>
+            <td className="select-column"><input aria-label={`Select ${student.firstName}`} type="checkbox" disabled={student.status !== 'ACTIVE' || !!student.userId} checked={selectedIds.includes(student.id)} onChange={event => setSelectedIds(current => event.target.checked ? [...current, student.id] : current.filter(id => id !== student.id))} /></td>
             <td className="row-actions-cell"><div className="row-action-menu"><button type="button" className="row-action-trigger" aria-label={`Actions for ${student.firstName} ${student.lastName || ""}`} aria-haspopup="true" aria-expanded={openActionMenuId === student.id} onClick={() => setOpenActionMenuId(current => current === student.id ? null : student.id)}><MoreVertical size={18} /></button>{openActionMenuId === student.id && <div className="row-action-dropdown" role="menu"><button type="button" role="menuitem" onClick={() => { setOpenActionMenuId(null); editStudent(student) }}>Edit student</button>{student.status === 'ACTIVE' && <button type="button" role="menuitem" className="danger" onClick={() => { setOpenActionMenuId(null); void deleteStudent(student) }}>Delete student</button>}</div>}</div></td>
             <td><strong>{student.firstName} {student.lastName || ''}</strong></td>
             <td>{student.admissionNumber}</td><td>{student.className}{student.section ? ` - ${student.section}` : ''}</td>
