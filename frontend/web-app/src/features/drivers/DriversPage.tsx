@@ -15,6 +15,7 @@ export function DriversPage({ token, setError, setNotice }: { token: string; set
   const [busy, setBusy] = useState(false)
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [selectedDriverIds, setSelectedDriverIds] = useState<number[]>([])
   const [openActionMenuId, setOpenActionMenuId] = useState<number | null>(null)
   const [absenceDriver, setAbsenceDriver] = useState<SchoolDriver | null>(null)
   const [absenceStartDate, setAbsenceStartDate] = useState('')
@@ -32,6 +33,7 @@ export function DriversPage({ token, setError, setNotice }: { token: string; set
         api<School[]>('/school', token).catch(() => [] as School[]),
       ])
       setDrivers(driverRows)
+      setSelectedDriverIds(current => current.filter(id => driverRows.some(driver => driver.id === id && driver.status === 'ACTIVE' && !driver.userId)))
       setSchools(schoolRows)
       setForm(current => current.schoolId || !schoolRows.length ? current : { ...current, schoolId: schoolRows[0].id })
     } catch (err) {
@@ -47,6 +49,24 @@ export function DriversPage({ token, setError, setNotice }: { token: string; set
     [driver.driverCode, driver.firstName, driver.lastName, driver.phone, driver.email, driver.licenseNumber]
       .filter(Boolean).join(' ').toLowerCase().includes(search.toLowerCase())
   )
+
+
+  async function createSelectedLogins() {
+    const selected = drivers.filter(driver => selectedDriverIds.includes(driver.id) && driver.status === 'ACTIVE' && !driver.userId)
+    if (!selected.length) { setError('Select active drivers without an existing login account.'); return }
+    setBusy(true); setError(''); setNotice('')
+    try {
+      const result = await api<Array<{ fullName: string; loginId: string; temporaryPassword: string }>>('/user/login-accounts/generate', token, {
+        method: 'POST', body: JSON.stringify({ studentIds: [], driverIds: selected.map(driver => driver.id) }),
+      })
+      window.alert(result.map(row => row.fullName + '\\nLogin ID: ' + row.loginId + '\\nTemporary password: ' + row.temporaryPassword).join('\\n\\n'))
+      setSelectedDriverIds([])
+      setNotice('Created ' + result.length + ' driver login account(s). Save the temporary credentials now.')
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to create driver login accounts.')
+    } finally { setBusy(false) }
+  }
 
   function openCreateForm() {
     setEditingId(null)
@@ -173,6 +193,7 @@ export function DriversPage({ token, setError, setNotice }: { token: string; set
       <div><h2>Driver management</h2><p>Add, update and manage driver profiles and driving licence details.</p></div>
       <div className="page-header-actions">
         <button className="button primary" onClick={openCreateForm}><UserRound size={15} /> Add Driver</button>
+        <button className="button secondary" disabled={!selectedDriverIds.length || busy} onClick={() => void createSelectedLogins()}><UserRound size={15}/> Create Login ({selectedDriverIds.length})</button>
         <button className="button secondary" onClick={() => void load()} disabled={loading}><RefreshCw size={14} /> Refresh</button>
       </div>
     </div>}
@@ -238,9 +259,10 @@ export function DriversPage({ token, setError, setNotice }: { token: string; set
           </div>
         </div>
         <div className="table-wrap"><table>
-          <thead><tr><th className="row-actions-heading">Actions</th><th>Driver</th><th>Driver code</th><th>Phone</th><th>Driving licence</th><th>Licence expiry</th><th>School</th><th>Status</th></tr></thead>
+          <thead><tr><th className="select-column"><input aria-label="Select all active drivers without login" type="checkbox" checked={filteredDrivers.filter(driver => driver.status === 'ACTIVE' && !driver.userId).length > 0 && filteredDrivers.filter(driver => driver.status === 'ACTIVE' && !driver.userId).every(driver => selectedDriverIds.includes(driver.id))} onChange={event => { const ids = filteredDrivers.filter(driver => driver.status === 'ACTIVE' && !driver.userId).map(driver => driver.id); setSelectedDriverIds(event.target.checked ? Array.from(new Set([...selectedDriverIds, ...ids])) : selectedDriverIds.filter(id => !ids.includes(id))) }}/></th><th className="row-actions-heading">Actions</th><th>Driver</th><th>Driver code</th><th>Phone</th><th>Driving licence</th><th>Licence expiry</th><th>School</th><th>Status</th></tr></thead>
           <tbody>
             {filteredDrivers.map(driver => <tr key={driver.id}>
+              <td className="select-column"><input aria-label={`Select ${driver.firstName}`} type="checkbox" disabled={driver.status !== 'ACTIVE' || !!driver.userId} checked={selectedDriverIds.includes(driver.id)} onChange={event => setSelectedDriverIds(current => event.target.checked ? [...current, driver.id] : current.filter(id => id !== driver.id))}/></td>
               <td className="row-actions-cell"><div className="row-action-menu"><button type="button" className="row-action-trigger" aria-label={`Actions for ${driver.firstName}`} aria-haspopup="true" aria-expanded={openActionMenuId === driver.id} onClick={() => setOpenActionMenuId(current => current === driver.id ? null : driver.id)}><MoreVertical size={18} /></button>{openActionMenuId === driver.id && <div className="row-action-dropdown" role="menu"><button type="button" role="menuitem" onClick={() => { setOpenActionMenuId(null); editDriver(driver) }}>Edit driver</button>{driver.status === 'ACTIVE' && <button type="button" role="menuitem" onClick={() => { setOpenActionMenuId(null); void openAbsenceForm(driver) }}>Mark Absent</button>}{driver.status === 'ACTIVE' && <button type="button" role="menuitem" className="danger" onClick={() => { setOpenActionMenuId(null); void deleteDriver(driver) }}>Delete driver</button>}</div>}</div></td>
               <td><strong>{driver.firstName} {driver.lastName}</strong></td>
               <td>{driver.driverCode}</td><td>{driver.phone}</td><td>{driver.licenseNumber}</td>
@@ -248,8 +270,8 @@ export function DriversPage({ token, setError, setNotice }: { token: string; set
               <td>{schools.find(school => school.id === driver.schoolId)?.name || '—'}</td>
               <td><span className={`status-pill ${driver.status === 'ACTIVE' ? 'active' : 'inactive'}`}>{driver.status}</span></td>
             </tr>)}
-            {loading && <tr><td colSpan={8} className="empty-cell">Loading drivers…</td></tr>}
-            {!loading && filteredDrivers.length === 0 && <tr><td colSpan={8} className="empty-cell">{search ? 'No drivers match your search.' : 'No drivers found. Add your first driver.'}</td></tr>}
+            {loading && <tr><td colSpan={9} className="empty-cell">Loading drivers…</td></tr>}
+            {!loading && filteredDrivers.length === 0 && <tr><td colSpan={9} className="empty-cell">{search ? 'No drivers match your search.' : 'No drivers found. Add your first driver.'}</td></tr>}
           </tbody>
         </table></div>
       </section>
