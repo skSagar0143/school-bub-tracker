@@ -4,7 +4,7 @@ import { api } from '../../pages/LegacyPages'
 import { useCallback, useEffect, useState } from 'react'
 import type { School, SchoolDriver, SchoolDriverForm } from '../../pages/LegacyPages'
 import { emptySchoolDriver, downloadExcelReport, downloadPdfReport } from '../../pages/LegacyPages'
-import { MoreVertical, RefreshCw, UserRound } from 'lucide-react'
+import { RefreshCw, UserRound } from 'lucide-react'
 import { TextInput, EmailInput, PhoneInput, DateInput, SearchInput, SelectInput, TextArea } from '../../components/ui/FormControls'
 
 export function DriversPage({ token, setError, setNotice }: { token: string; setError: (value: string) => void; setNotice: (value: string) => void }) {
