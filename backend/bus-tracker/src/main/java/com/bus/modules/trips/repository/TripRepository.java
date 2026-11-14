@@ -21,10 +21,16 @@ public interface TripRepository extends JpaRepository<TripEntity, Long> {
             @org.springframework.data.repository.query.Param("busAssignmentId") Long busAssignmentId,
             @org.springframework.data.repository.query.Param("tripDate") LocalDate tripDate,
             @org.springframework.data.repository.query.Param("tripType") String tripType);
+
     List<TripEntity> findBySchoolIdAndTripDateOrderByScheduledStartTimeAsc(Long schoolId, LocalDate tripDate);
+
     List<TripEntity> findBySchoolIdOrderByTripDateDescScheduledStartTimeAsc(Long schoolId);
+
     Optional<TripEntity> findByIdAndSchoolId(Long id, Long schoolId);
 
+    Optional<TripEntity> findByIdAndSchoolIdAndDriverIdAndStatus(
+            Long id, Long schoolId, Long driverId, String status);
+
     List<TripEntity> findBySchoolIdAndDriverIdAndTripDateBetweenAndStatus(
-        Long schoolId, Long driverId, LocalDate startDate, LocalDate endDate, String status);
+            Long schoolId, Long driverId, LocalDate startDate, LocalDate endDate, String status);
 }
