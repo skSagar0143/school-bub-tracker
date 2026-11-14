@@ -4,7 +4,7 @@ import { api } from '../../pages/LegacyPages'
 import { useCallback, useEffect, useState } from 'react'
 import type { School, Bus, BusForm } from '../../pages/LegacyPages'
 import { emptyBus, downloadExcelReport, downloadPdfReport } from '../../pages/LegacyPages'
-import { BusFront, MoreVertical, RefreshCw } from 'lucide-react'
+import { BusFront, RefreshCw } from 'lucide-react'
 import { TextInput, NumberInput, DateInput, SearchInput, SelectInput } from '../../components/ui/FormControls'
 
 export function BusesPage({ token, setError, setNotice }: { token: string; setError: (value: string) => void; setNotice: (value: string) => void }) {
