@@ -254,7 +254,7 @@ export function TripsPage({ token, setError, setNotice }: Props) {
                 {item.status === 'SCHEDULED' && <button type="button" role="menuitem" disabled={updating || !getTripReadiness(item).ready} title={!getTripReadiness(item).ready ? 'Open trip details to review readiness issues' : 'Start trip'} onClick={() => { setOpenActionMenuId(null); void updateTripStatus(item, 'IN_PROGRESS') }}>Start trip</button>}
                 {item.status === 'IN_PROGRESS' && <button type="button" role="menuitem" disabled={updating} onClick={() => { setOpenActionMenuId(null); void updateTripStatus(item, 'COMPLETED') }}>Complete trip</button>}
                 {(item.status === 'SCHEDULED' || item.status === 'IN_PROGRESS') && <button type="button" role="menuitem" className="danger" disabled={updating} onClick={() => { setOpenActionMenuId(null); if (window.confirm('Cancel this trip?')) void updateTripStatus(item, 'CANCELLED') }}>Cancel trip</button>}
-              </PortalActionMenu></td>
+              </PortalActionMenu></div></td>
             <td><strong>{busLabel(item.busId)}</strong></td><td>{routeLabel(item.routeId)}</td>
             <td><span className={`status-pill ${item.tripType === 'PICKUP' ? 'active' : 'inactive'}`}>{item.tripType === 'PICKUP' ? 'Morning pickup' : 'Afternoon drop'}</span></td>
             <td>{item.scheduledStartTime.slice(0, 5)}</td><td>{driverLabel(item.driverId)}</td>
