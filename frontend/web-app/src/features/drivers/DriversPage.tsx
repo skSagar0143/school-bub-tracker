@@ -59,7 +59,7 @@ export function DriversPage({ token, setError, setNotice }: { token: string; set
       const result = await api<Array<{ fullName: string; loginId: string; temporaryPassword: string }>>('/user/login-accounts/generate', token, {
         method: 'POST', body: JSON.stringify({ studentIds: [], driverIds: selected.map(driver => driver.id) }),
       })
-      window.alert(result.map(row => row.fullName + '\\nLogin ID: ' + row.loginId + '\\nTemporary password: ' + row.temporaryPassword).join('\\n\\n'))
+      window.alert(result.map(row => row.fullName + '\nLogin ID: ' + row.loginId + '\nTemporary password: ' + row.temporaryPassword).join('\n\n'))
       setSelectedDriverIds([])
       setNotice('Created ' + result.length + ' driver login account(s). Save the temporary credentials now.')
       await load()
