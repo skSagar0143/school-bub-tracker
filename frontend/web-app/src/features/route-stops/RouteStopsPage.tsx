@@ -149,7 +149,7 @@ export function RouteStopsPage({ token, setError, setNotice }: { token: string; 
           <thead><tr><th className="row-actions-heading" aria-label="Row actions"></th><th>Stop</th><th>Route</th><th>Order</th><th>Address</th><th>Arrival time</th><th>Pickup</th><th>Drop-off</th><th>Status</th></tr></thead>
           <tbody>
             {filteredStops.map(stop => <tr key={stop.id}>
-              <td className="row-actions-cell"><div className="row-action-menu"><PortalActionMenu label="Row actions" open={openActionMenuId === stop.id} onOpenChange={open => setOpenActionMenuId(open ? stop.id : null)}><button type="button" role="menuitem" onClick={() => { setOpenActionMenuId(null); editStop(stop) }}>Edit stop</button>{stop.status === 'ACTIVE' && <button type="button" role="menuitem" className="danger" onClick={() => { setOpenActionMenuId(null); void deleteStop(stop) }}>Delete stop</button>}</PortalActionMenu></td>
+              <td className="row-actions-cell"><div className="row-action-menu"><PortalActionMenu label="Row actions" open={openActionMenuId === stop.id} onOpenChange={open => setOpenActionMenuId(open ? stop.id : null)}><button type="button" role="menuitem" onClick={() => { setOpenActionMenuId(null); editStop(stop) }}>Edit stop</button>{stop.status === 'ACTIVE' && <button type="button" role="menuitem" className="danger" onClick={() => { setOpenActionMenuId(null); void deleteStop(stop) }}>Delete stop</button>}</PortalActionMenu></div></td>
               <td><strong>{stop.stopName}</strong></td>
               <td>{routeLabel(stop.routeId)}</td>
               <td>{stop.stopOrder}</td>
