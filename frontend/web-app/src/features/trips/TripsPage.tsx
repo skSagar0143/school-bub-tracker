@@ -1,3 +1,4 @@
+import { PortalActionMenu } from '../../components/ui/PortalActionMenu'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { BusFront, CalendarClock, MoreVertical, RefreshCw, Route as RouteIcon } from 'lucide-react'
 import { DateInput, SearchInput } from '../../components/ui/FormControls'
@@ -248,14 +249,12 @@ export function TripsPage({ token, setError, setNotice }: Props) {
         </tr></thead><tbody>
           {filteredTrips.map(item => <tr key={item.id}>
             <td className="row-actions-cell"><div className="row-action-menu">
-              <button type="button" className="row-action-trigger" aria-label="Trip actions" aria-haspopup="true" aria-expanded={openActionMenuId === item.id} onClick={() => setOpenActionMenuId(current => current === item.id ? null : item.id)}><MoreVertical size={18}/></button>
-              {openActionMenuId === item.id && <div className="row-action-dropdown" role="menu">
+              <PortalActionMenu label={"Trip actions"} open={openActionMenuId === item.id} onOpenChange={open => setOpenActionMenuId(open ? item.id : null)}>
                 <button type="button" role="menuitem" onClick={() => { setSelectedTripId(item.id); setOpenActionMenuId(null) }}>View trip details</button>
                 {item.status === 'SCHEDULED' && <button type="button" role="menuitem" disabled={updating || !getTripReadiness(item).ready} title={!getTripReadiness(item).ready ? 'Open trip details to review readiness issues' : 'Start trip'} onClick={() => { setOpenActionMenuId(null); void updateTripStatus(item, 'IN_PROGRESS') }}>Start trip</button>}
                 {item.status === 'IN_PROGRESS' && <button type="button" role="menuitem" disabled={updating} onClick={() => { setOpenActionMenuId(null); void updateTripStatus(item, 'COMPLETED') }}>Complete trip</button>}
                 {(item.status === 'SCHEDULED' || item.status === 'IN_PROGRESS') && <button type="button" role="menuitem" className="danger" disabled={updating} onClick={() => { setOpenActionMenuId(null); if (window.confirm('Cancel this trip?')) void updateTripStatus(item, 'CANCELLED') }}>Cancel trip</button>}
-              </div>}
-            </div></td>
+              </PortalActionMenu></td>
             <td><strong>{busLabel(item.busId)}</strong></td><td>{routeLabel(item.routeId)}</td>
             <td><span className={`status-pill ${item.tripType === 'PICKUP' ? 'active' : 'inactive'}`}>{item.tripType === 'PICKUP' ? 'Morning pickup' : 'Afternoon drop'}</span></td>
             <td>{item.scheduledStartTime.slice(0, 5)}</td><td>{driverLabel(item.driverId)}</td>
