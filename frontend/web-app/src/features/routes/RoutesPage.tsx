@@ -4,7 +4,7 @@ import { api } from '../../pages/LegacyPages'
 import { useCallback, useEffect, useState } from 'react'
 import type { School, SchoolRoute, SchoolRouteForm } from '../../pages/LegacyPages'
 import { emptySchoolRoute, downloadExcelReport, downloadPdfReport } from '../../pages/LegacyPages'
-import { MoreVertical, RefreshCw, Route } from 'lucide-react'
+import { RefreshCw, Route } from 'lucide-react'
 import { TextInput, TimeInput, NumberInput, SearchInput, SelectInput, TextArea } from '../../components/ui/FormControls'
 
 export function RoutesPage({ token, setError, setNotice }: { token: string; setError: (value: string) => void; setNotice: (value: string) => void }) {
