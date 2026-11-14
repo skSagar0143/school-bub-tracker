@@ -70,21 +70,20 @@ export function UsersPage({ token, setError, setNotice }: {
     <section className="panel">
       <div className="panel-heading">
         <div><span className="section-kicker">ACCOUNT DIRECTORY</span><h3>Login accounts <small className="count-label">{rows.length}</small></h3></div>
-        <div className="table-header-tools">
-          <select aria-label="Filter account role" value={role} onChange={event => setRole(event.target.value as 'STUDENT' | 'DRIVER')}>
-            <option value="STUDENT">Students</option><option value="DRIVER">Drivers</option>
-          </select>
+        <div className="account-role-selector" role="tablist" aria-label="Filter login accounts">
+          <button type="button" role="tab" aria-selected={role === 'STUDENT'} className={role === 'STUDENT' ? 'active' : ''} onClick={() => setRole('STUDENT')}>Students</button>
+          <button type="button" role="tab" aria-selected={role === 'DRIVER'} className={role === 'DRIVER' ? 'active' : ''} onClick={() => setRole('DRIVER')}>Drivers</button>
         </div>
       </div>
       <div className="table-wrap">
         <table className="data-table">
           <thead><tr>
-            <th className="select-column"><input type="checkbox" aria-label="Select all accounts" checked={allSelected} onChange={event => setSelectedIds(event.target.checked ? rows.map(row => row.id) : [])}/></th>
+            <th className="select-column"><input className="record-select-checkbox" type="checkbox" aria-label="Select all accounts" checked={allSelected} onChange={event => setSelectedIds(event.target.checked ? rows.map(row => row.id) : [])}/></th>
             <th className="row-actions-heading"></th><th>Name</th><th>Login ID</th><th>Password</th>
           </tr></thead>
           <tbody>
             {rows.map(account => <tr key={account.id}>
-              <td className="select-column"><input type="checkbox" aria-label={`Select ${account.fullName}`} checked={selectedIds.includes(account.id)} onChange={event => setSelectedIds(current => event.target.checked ? [...current, account.id] : current.filter(id => id !== account.id))}/></td>
+              <td className="select-column"><input className="record-select-checkbox" type="checkbox" aria-label={`Select ${account.fullName}`} checked={selectedIds.includes(account.id)} onChange={event => setSelectedIds(current => event.target.checked ? [...current, account.id] : current.filter(id => id !== account.id))}/></td>
               <td className="row-actions-cell">
                 <div className="row-action-menu">
                   <button type="button" className="row-action-trigger" aria-label={`Actions for ${account.fullName}`} aria-haspopup="true" aria-expanded={openActionId === account.id} onClick={() => setOpenActionId(current => current === account.id ? null : account.id)}><MoreVertical size={18}/></button>
