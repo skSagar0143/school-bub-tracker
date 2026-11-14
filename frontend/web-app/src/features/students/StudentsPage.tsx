@@ -1,3 +1,4 @@
+import { PortalActionMenu } from '../../components/ui/PortalActionMenu'
 import type { FormEvent } from 'react'
 import { api } from '../../pages/LegacyPages'
 import { useCallback, useEffect, useState } from 'react'
@@ -190,7 +191,7 @@ export function StudentsPage({ token, setError, setNotice }: { token: string; se
         <tbody>
           {filteredStudents.map(student => <tr key={student.id}>
             <td className="select-column"><input className="record-select-checkbox" aria-label={`Select ${student.firstName}`} type="checkbox" disabled={String(student.status).toUpperCase() !== 'ACTIVE' || !!student.userId} checked={selectedIds.includes(student.id)} onChange={event => setSelectedIds(current => event.target.checked ? Array.from(new Set([...current, student.id])) : current.filter(id => id !== student.id))} /></td>
-            <td className="row-actions-cell"><div className="row-action-menu"><button type="button" className="row-action-trigger" aria-label={`Actions for ${student.firstName} ${student.lastName || ""}`} aria-haspopup="true" aria-expanded={openActionMenuId === student.id} onClick={() => setOpenActionMenuId(current => current === student.id ? null : student.id)}><MoreVertical size={18} /></button>{openActionMenuId === student.id && <div className="row-action-dropdown" role="menu"><button type="button" role="menuitem" onClick={() => { setOpenActionMenuId(null); editStudent(student) }}>Edit student</button>{student.status === 'ACTIVE' && <button type="button" role="menuitem" className="danger" onClick={() => { setOpenActionMenuId(null); void deleteStudent(student) }}>Delete student</button>}</div>}</div></td>
+            <td className="row-actions-cell"><div className="row-action-menu"><PortalActionMenu label="Row actions" open={openActionMenuId === student.id} onOpenChange={open => setOpenActionMenuId(open ? student.id : null)}><button type="button" role="menuitem" onClick={() => { setOpenActionMenuId(null); editStudent(student) }}>Edit student</button>{student.status === 'ACTIVE' && <button type="button" role="menuitem" className="danger" onClick={() => { setOpenActionMenuId(null); void deleteStudent(student) }}>Delete student</button>}</PortalActionMenu></td>
             <td><strong>{student.firstName} {student.lastName || ''}</strong></td>
             <td>{student.admissionNumber}</td><td>{student.className}{student.section ? ` - ${student.section}` : ''}</td>
             <td>{student.parentName}</td><td>{student.parentPhone}</td>
