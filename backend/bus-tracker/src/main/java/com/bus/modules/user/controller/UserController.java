@@ -12,6 +12,8 @@ import com.bus.modules.user.dto.UpdateUserRequest;
 import com.bus.modules.user.dto.UserResponse;
 import com.bus.modules.user.dto.UserStatusRequest;
 import com.bus.modules.user.dto.ResetPasswordResponse;
+import com.bus.modules.user.dto.ManagedUserResponse;
+import com.bus.modules.user.service.CredentialEncryptionService;
 import com.bus.modules.user.entity.UserRole;
 import com.bus.modules.user.service.UserService;
 
@@ -29,6 +31,7 @@ import lombok.RequiredArgsConstructor;
 @Tag(name = "User Management", description = "School Admin manages driver, student and parent accounts")
 public class UserController {
     private final UserService userService;
+    private final CredentialEncryptionService credentialEncryptionService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -39,8 +42,11 @@ public class UserController {
 
     @GetMapping
     @Operation(summary = "List Driver, Student and Parent accounts")
-    public List<UserResponse> getAll(@RequestParam(required = false) UserRole role) {
-        return userService.getUsers(role).stream().map(UserResponse::from).toList();
+    public List<ManagedUserResponse> getAll(@RequestParam(required = false) UserRole role) {
+        return userService.getUsers(role).stream().map(user -> new ManagedUserResponse(
+                user.getId(), user.getFullName(), user.getLoginId(),
+                credentialEncryptionService.decrypt(user.getPasswordDisplayEncrypted()),
+                user.getRole(), user.isEnabled(), user.getCreatedAt())).toList();
     }
 
     @GetMapping("/{id}")
