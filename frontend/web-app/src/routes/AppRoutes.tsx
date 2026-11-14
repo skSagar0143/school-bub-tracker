@@ -15,6 +15,7 @@ import { TripSchedulesPage } from '../features/trip-schedules/TripSchedulesPage'
 import { TripsPage } from '../features/trips/TripsPage'
 import { DashboardPage } from '../features/dashboard/DashboardPage'
 import { LoginManagementPage } from '../features/login-management/LoginManagementPage'
+import { UsersPage } from '../features/login-management/UsersPage'
 
 type Props = {
   token: string
@@ -31,6 +32,7 @@ export default function AppRoutes({ token, user, menus, currentPath, navigate, s
   return <Routes>
     <Route path="/school" element={<SchoolPage {...shared} />} />
     <Route path="/login-management" element={<LoginManagementPage {...shared} />} />
+    <Route path="/users" element={<UsersPage {...shared} />} />
     <Route path="/students" element={<StudentsPage {...shared} />} />
     <Route path="/stu" element={<StudentsPage {...shared} />} />
     <Route path="/bus" element={<BusesPage {...shared} />} />
