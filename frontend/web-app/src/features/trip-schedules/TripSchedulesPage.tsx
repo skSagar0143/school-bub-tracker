@@ -374,6 +374,7 @@ export function TripSchedulesPage({ token, setError, setNotice }: Props) {
                     <button type="button" role="menuitem" onClick={() => { setOpenActionMenuId(null); editSchedule(item) }}>Edit schedule</button>
                     {item.status === 'ACTIVE' && <button type="button" role="menuitem" className="danger" onClick={() => { setOpenActionMenuId(null); void deactivate(item) }}>Deactivate schedule</button>}
                   </PortalActionMenu>
+                </div>
               </td>
               <td><strong>{assignmentLabel(item.busAssignmentId)}</strong></td>
               <td><span className={`status-pill ${item.tripType === 'PICKUP' ? 'active' : 'inactive'}`}>{item.tripType === 'PICKUP' ? 'Morning pickup' : 'Afternoon drop'}</span></td>
