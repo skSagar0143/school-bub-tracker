@@ -1,7 +1,7 @@
 import { PortalActionMenu } from '../../components/ui/PortalActionMenu'
 import type { FormEvent } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CalendarClock, MoreVertical, RefreshCw } from 'lucide-react'
+import { CalendarClock, RefreshCw } from 'lucide-react'
 import { DateInput, SearchInput, SelectInput, TextArea, TimeInput } from '../../components/ui/FormControls'
 import {
   api,
