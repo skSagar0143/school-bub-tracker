@@ -80,7 +80,7 @@ function App() {
   const location = useLocation()
   const routerNavigate = useNavigate()
   const currentPath = location.pathname
-  const [loginEmail, setLoginEmail] = useState('')
+  const [loginId, setLoginId] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
   const [loginBusy, setLoginBusy] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -186,7 +186,7 @@ function App() {
     event.preventDefault()
     setLoginBusy(true); setError('')
     try {
-      const result = await api<LoginResponse>('/auth/login', '', { method: 'POST', body: JSON.stringify({ email: loginEmail.trim(), password: loginPassword }) })
+      const result = await api<LoginResponse>('/auth/login', '', { method: 'POST', body: JSON.stringify({ loginId: loginId.trim(), password: loginPassword }) })
       sessionStorage.setItem('accessToken', result.accessToken)
       sessionStorage.setItem('currentUser', JSON.stringify(result.user))
       setToken(result.accessToken); setUser(result.user); setUserMenuOpen(false)
@@ -216,7 +216,7 @@ function App() {
   const activeMenu = useMemo(() => flattenMenus(menus).find(item => item.path === currentPath), [menus, currentPath])
 
   if (!token || !user) {
-    return <><Toast toast={toast} onClose={closeToast} /><LoginPage email={loginEmail} password={loginPassword} setEmail={setLoginEmail} setPassword={setLoginPassword} onSubmit={handleLogin} busy={loginBusy} /> </>
+    return <><Toast toast={toast} onClose={closeToast} /><LoginPage loginId={loginId} password={loginPassword} setLoginId={setLoginId} setPassword={setLoginPassword} onSubmit={handleLogin} busy={loginBusy} /> </>
   }
 
   return (

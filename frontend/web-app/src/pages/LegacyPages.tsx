@@ -179,6 +179,7 @@ export function withStudentMenu(items: Menu[], role?: UserRole): Menu[] {
   if (role !== 'SCHOOL_ADMIN') return items
   const normalized = items.map(menu => {
     const name = menu.name.trim().toLowerCase()
+    if (name === 'login management' || name === 'login accounts' || name === 'login account') return { ...menu, path: '/login-management', subMenus: [] }
     if (name === 'students') return { ...menu, path: '/students', subMenus: [] }
     if (name === 'drivers' || name === 'driver') return { ...menu, path: '/drivers', subMenus: [] }
     if (name === 'bus' || name === 'buses' || name === 'busses') return { ...menu, path: '/bus', subMenus: [] }
@@ -192,6 +193,9 @@ export function withStudentMenu(items: Menu[], role?: UserRole): Menu[] {
     if (name === 'trip' || name === 'trips' || name === 'trip management' || name === 'trip managements') return { ...menu, path: menu.path || '/trips', subMenus: [] }
     return menu
   })
+  if (!normalized.some(menu => menu.path === '/login-management' || menu.name.trim().toLowerCase() === 'login management')) {
+    normalized.push({ id: -100, name: 'Login Management', path: '/login-management', icon: 'users', sequences: 999, subMenus: [] })
+  }
   return normalized
 }
 export function flattenMenus(items: Menu[]): Menu[] { return items.flatMap(item => [item, ...flattenMenus(item.subMenus || [])]) }
