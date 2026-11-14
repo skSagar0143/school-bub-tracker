@@ -1,6 +1,7 @@
 package com.bus.modules.user.service;
 
 import java.util.List;
+import java.security.SecureRandom;
 import java.util.UUID;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -10,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.bus.common.exception.ResourceNotFoundException;
 import com.bus.modules.user.dto.CreateUserRequest;
 import com.bus.modules.user.dto.UpdateUserRequest;
+import com.bus.modules.user.dto.ResetPasswordResponse;
 import com.bus.modules.user.entity.User;
 import com.bus.modules.user.entity.UserRole;
 import com.bus.modules.user.repository.UserRepository;
@@ -20,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @Transactional
 public class UserService {
+    private static final SecureRandom RANDOM = new SecureRandom();
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
@@ -46,6 +49,15 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
+    public List<User> getUsers(UserRole role) {
+        if (role == null) return getUsers();
+        if (role != UserRole.DRIVER && role != UserRole.STUDENT) {
+            throw new IllegalArgumentException("Only DRIVER or STUDENT accounts can be filtered here.");
+        }
+        return userRepository.findAllByRoleInOrderByCreatedAtDesc(List.of(role));
+    }
+
+    @Transactional(readOnly = true)
     public User getUser(UUID id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + id));
@@ -68,6 +80,17 @@ public class UserService {
         }
         user.setEnabled(false);
         userRepository.save(user);
+    }
+
+    public ResetPasswordResponse resetPassword(UUID id) {
+        User user = getUser(id);
+        if (user.getRole() != UserRole.DRIVER && user.getRole() != UserRole.STUDENT) {
+            throw new IllegalArgumentException("Password reset is available only for driver and student accounts.");
+        }
+        String temporaryPassword = Integer.toString(100000 + RANDOM.nextInt(900000));
+        user.setPasswordHash(passwordEncoder.encode(temporaryPassword));
+        userRepository.save(user);
+        return new ResetPasswordResponse(user.getLoginId(), temporaryPassword);
     }
 
     public User updateStatus(UUID id, boolean enabled) {
