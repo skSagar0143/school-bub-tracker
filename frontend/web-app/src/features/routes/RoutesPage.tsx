@@ -1,3 +1,4 @@
+import { PortalActionMenu } from '../../components/ui/PortalActionMenu'
 import type { FormEvent } from 'react'
 import { api } from '../../pages/LegacyPages'
 import { useCallback, useEffect, useState } from 'react'
@@ -144,7 +145,7 @@ export function RoutesPage({ token, setError, setNotice }: { token: string; setE
             <thead><tr><th className="row-actions-heading" aria-label="Row actions"></th><th>Route</th><th>Starting point</th><th>Ending point</th><th>Distance</th><th>Duration</th><th>Schedule</th><th>School</th><th>Status</th></tr></thead>
             <tbody>
               {filteredRoutes.map(route => <tr key={route.id}>
-                <td className="row-actions-cell"><div className="row-action-menu"><button type="button" className="row-action-trigger" aria-label={`Actions for ${route.routeCode}`} aria-haspopup="true" aria-expanded={openActionMenuId === route.id} onClick={() => setOpenActionMenuId(current => current === route.id ? null : route.id)}><MoreVertical size={18} /></button>{openActionMenuId === route.id && <div className="row-action-dropdown" role="menu"><button type="button" role="menuitem" onClick={() => { setOpenActionMenuId(null); editRoute(route) }}>Edit route</button>{route.status === 'ACTIVE' && <button type="button" role="menuitem" className="danger" onClick={() => { setOpenActionMenuId(null); void deleteRoute(route) }}>Delete route</button>}</div>}</div></td>
+                <td className="row-actions-cell"><div className="row-action-menu"><PortalActionMenu label="Row actions" open={openActionMenuId === route.id} onOpenChange={open => setOpenActionMenuId(open ? route.id : null)}><button type="button" role="menuitem" onClick={() => { setOpenActionMenuId(null); editRoute(route) }}>Edit route</button>{route.status === 'ACTIVE' && <button type="button" role="menuitem" className="danger" onClick={() => { setOpenActionMenuId(null); void deleteRoute(route) }}>Delete route</button>}</PortalActionMenu></td>
                 <td><strong>{route.routeName}</strong><span className="student-subtext">{route.routeCode}</span></td>
                 <td>{route.startingPoint}</td><td>{route.endingPoint}</td>
                 <td>{route.estimatedDistance != null ? `${route.estimatedDistance} km` : '—'}</td>
