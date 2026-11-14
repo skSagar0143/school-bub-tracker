@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import com.bus.modules.user.dto.LoginRequest;
 import com.bus.modules.user.dto.ChangePasswordRequest;
@@ -41,6 +42,7 @@ public class AuthController {
     private final JwtService jwtService;
 
     @PostMapping("/change-password")
+    @PreAuthorize("isAuthenticated()")
     public void changePassword(@Valid @RequestBody ChangePasswordRequest request, Authentication authentication) {
         UUID userId = UUID.fromString(authentication.getName());
         User user = userRepository.findById(userId)
