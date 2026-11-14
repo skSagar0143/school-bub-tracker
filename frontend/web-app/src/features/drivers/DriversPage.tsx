@@ -33,7 +33,7 @@ export function DriversPage({ token, setError, setNotice }: { token: string; set
         api<School[]>('/school', token).catch(() => [] as School[]),
       ])
       setDrivers(driverRows)
-      setSelectedDriverIds(current => current.filter(id => driverRows.some(driver => driver.id === id && driver.status === 'ACTIVE' && !driver.userId)))
+      setSelectedDriverIds(current => current.filter(id => driverRows.some(driver => driver.id === id && String(driver.status).toUpperCase() === 'ACTIVE' && !driver.userId)))
       setSchools(schoolRows)
       setForm(current => current.schoolId || !schoolRows.length ? current : { ...current, schoolId: schoolRows[0].id })
     } catch (err) {
@@ -50,6 +50,8 @@ export function DriversPage({ token, setError, setNotice }: { token: string; set
       .filter(Boolean).join(' ').toLowerCase().includes(search.toLowerCase())
   )
 
+
+  const selectableDrivers = filteredDrivers.filter(driver => String(driver.status).toUpperCase() === 'ACTIVE' && !driver.userId)
 
   async function createSelectedLogins() {
     const selected = drivers.filter(driver => selectedDriverIds.includes(driver.id) && driver.status === 'ACTIVE' && !driver.userId)
@@ -258,10 +260,10 @@ export function DriversPage({ token, setError, setNotice }: { token: string; set
           </div>
         </div>
         <div className="table-wrap"><table>
-          <thead><tr><th className="select-column"><input aria-label="Select all active drivers without login" type="checkbox" checked={filteredDrivers.filter(driver => driver.status === 'ACTIVE' && !driver.userId).length > 0 && filteredDrivers.filter(driver => driver.status === 'ACTIVE' && !driver.userId).every(driver => selectedDriverIds.includes(driver.id))} onChange={event => { const ids = filteredDrivers.filter(driver => driver.status === 'ACTIVE' && !driver.userId).map(driver => driver.id); setSelectedDriverIds(event.target.checked ? Array.from(new Set([...selectedDriverIds, ...ids])) : selectedDriverIds.filter(id => !ids.includes(id))) }}/></th><th className="row-actions-heading">Actions</th><th>Driver</th><th>Driver code</th><th>Phone</th><th>Driving licence</th><th>Licence expiry</th><th>School</th><th>Status</th></tr></thead>
+          <thead><tr><th className="select-column"><input className="record-select-checkbox" aria-label="Select all eligible drivers" type="checkbox" checked={selectableDrivers.length > 0 && selectableDrivers.every(driver => selectedDriverIds.includes(driver.id))} onChange={event => setSelectedDriverIds(current => event.target.checked ? Array.from(new Set([...current, ...selectableDrivers.map(driver => driver.id)])) : current.filter(id => !selectableDrivers.some(driver => driver.id === id)))}/></th><th className="row-actions-heading">Actions</th><th>Driver</th><th>Driver code</th><th>Phone</th><th>Driving licence</th><th>Licence expiry</th><th>School</th><th>Status</th></tr></thead>
           <tbody>
             {filteredDrivers.map(driver => <tr key={driver.id}>
-              <td className="select-column"><input aria-label={`Select ${driver.firstName}`} type="checkbox" disabled={driver.status !== 'ACTIVE' || !!driver.userId} checked={selectedDriverIds.includes(driver.id)} onChange={event => setSelectedDriverIds(current => event.target.checked ? [...current, driver.id] : current.filter(id => id !== driver.id))}/></td>
+              <td className="select-column"><input className="record-select-checkbox" aria-label={`Select ${driver.firstName}`} type="checkbox" disabled={String(driver.status).toUpperCase() !== 'ACTIVE' || !!driver.userId} checked={selectedDriverIds.includes(driver.id)} onChange={event => setSelectedDriverIds(current => event.target.checked ? Array.from(new Set([...current, driver.id])) : current.filter(id => id !== driver.id))}/></td>
               <td className="row-actions-cell"><div className="row-action-menu"><button type="button" className="row-action-trigger" aria-label={`Actions for ${driver.firstName}`} aria-haspopup="true" aria-expanded={openActionMenuId === driver.id} onClick={() => setOpenActionMenuId(current => current === driver.id ? null : driver.id)}><MoreVertical size={18} /></button>{openActionMenuId === driver.id && <div className="row-action-dropdown" role="menu"><button type="button" role="menuitem" onClick={() => { setOpenActionMenuId(null); editDriver(driver) }}>Edit driver</button>{driver.status === 'ACTIVE' && <button type="button" role="menuitem" onClick={() => { setOpenActionMenuId(null); void openAbsenceForm(driver) }}>Mark Absent</button>}{driver.status === 'ACTIVE' && <button type="button" role="menuitem" className="danger" onClick={() => { setOpenActionMenuId(null); void deleteDriver(driver) }}>Delete driver</button>}</div>}</div></td>
               <td><strong>{driver.firstName} {driver.lastName}</strong></td>
               <td>{driver.driverCode}</td><td>{driver.phone}</td><td>{driver.licenseNumber}</td>
