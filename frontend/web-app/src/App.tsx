@@ -86,7 +86,7 @@ function App() {
   const [loginBusy, setLoginBusy] = useState(false)
   const [loading, setLoading] = useState(false)
   const [toast, setToast] = useState<ToastMessage | null>(null)
-  const setError = useCallback((message: string) => setToast(message ? { id: Date.now(), type: 'error', message } : null), [])
+  const setError = useCallback((message: string) => { if (message !== 'SESSION_EXPIRED') setToast(message ? { id: Date.now(), type: 'error', message } : null) }, [])
   const setNotice = useCallback((message: string) => setToast(message ? { id: Date.now(), type: 'success', message } : null), [])
   const closeToast = useCallback(() => setToast(null), [])
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
