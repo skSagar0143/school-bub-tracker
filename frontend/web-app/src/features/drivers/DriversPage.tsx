@@ -61,7 +61,7 @@ export function DriversPage({ token, setError, setNotice }: { token: string; set
       })
       window.alert(result.map(row => row.fullName + '\nLogin ID: ' + row.loginId + '\nTemporary password: ' + row.temporaryPassword).join('\n\n'))
       setSelectedDriverIds([])
-      setNotice('Created ' + result.length + ' driver login account(s). Save the temporary credentials now.')
+      setNotice('Login created successfully.')
       await load()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to create driver login accounts.')
