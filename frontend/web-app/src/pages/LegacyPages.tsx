@@ -16,7 +16,7 @@ export type School = {
 export type SchoolForm = Omit<School, 'id' | 'status' | 'createdAt' | 'updatedAt'>
 export type DriverForm = { fullName: string; email: string; password: string }
 export type Student = {
-  id: number; schoolId: number; firstName: string; lastName: string | null; admissionNumber: string
+  id: number; userId?: string | null; schoolId: number; firstName: string; lastName: string | null; admissionNumber: string
   dateOfBirth: string | null; gender: string | null; className: string; section: string | null; rollNumber: string | null
   parentName: string; parentPhone: string; parentEmail: string | null; emergencyContact: string | null
   address: string | null; status: 'ACTIVE' | 'INACTIVE'; createdAt: string; updatedAt: string
@@ -138,7 +138,7 @@ export async function api<T>(path: string, token: string, options: RequestInit =
 
 
 export type SchoolDriver = {
-  id: number; schoolId: number; driverCode: string; firstName: string; lastName: string
+  id: number; userId?: string | null; schoolId: number; driverCode: string; firstName: string; lastName: string
   dateOfBirth: string | null; gender: string | null; phone: string; alternatePhone: string | null
   email: string | null; address: string | null; city: string | null; state: string | null; pincode: string | null
   licenseNumber: string; licenseType: string | null; licenseExpiryDate: string | null; joiningDate: string | null
