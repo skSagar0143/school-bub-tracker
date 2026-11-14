@@ -8,8 +8,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.Authentication;
 
 import com.bus.modules.user.dto.LoginRequest;
+import com.bus.modules.user.dto.ChangePasswordRequest;
 import com.bus.modules.user.dto.LoginResponse;
 import com.bus.modules.user.dto.UserResponse;
 import com.bus.modules.user.entity.User;
@@ -37,6 +39,19 @@ public class AuthController {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+
+    @PostMapping("/change-password")
+    public void changePassword(@Valid @RequestBody ChangePasswordRequest request, Authentication authentication) {
+        UUID userId = UUID.fromString(authentication.getName());
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User account not found."));
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
+            throw new IllegalArgumentException("Current password is incorrect.");
+        }
+        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        user.setPasswordDisplayEncrypted(null);
+        userRepository.save(user);
+    }
 
     @PostMapping("/login")
     @ResponseStatus(HttpStatus.OK)
