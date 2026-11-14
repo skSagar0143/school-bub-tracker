@@ -97,7 +97,7 @@ export function StudentsPage({ token, setError, setNotice }: { token: string; se
       })
       window.alert(result.map(row => row.fullName + '\nLogin ID: ' + row.loginId + '\nTemporary password: ' + row.temporaryPassword).join('\n\n'))
       setSelectedIds([])
-      setNotice('Created ' + result.length + ' student login account(s). Save the temporary credentials now.')
+      setNotice('Login created successfully.')
       await load()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to create student login accounts.')
