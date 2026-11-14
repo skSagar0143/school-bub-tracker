@@ -25,6 +25,7 @@ public class UserService {
     private static final SecureRandom RANDOM = new SecureRandom();
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final CredentialEncryptionService credentialEncryptionService;
 
     public User createUser(CreateUserRequest request) {
         if (request.role() == UserRole.SCHOOL_ADMIN) {
@@ -89,6 +90,7 @@ public class UserService {
         }
         String temporaryPassword = Integer.toString(100000 + RANDOM.nextInt(900000));
         user.setPasswordHash(passwordEncoder.encode(temporaryPassword));
+        user.setPasswordDisplayEncrypted(credentialEncryptionService.encrypt(temporaryPassword));
         userRepository.save(user);
         return new ResetPasswordResponse(user.getLoginId(), temporaryPassword);
     }
