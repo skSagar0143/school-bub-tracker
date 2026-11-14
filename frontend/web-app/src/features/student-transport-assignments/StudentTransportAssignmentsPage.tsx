@@ -4,7 +4,7 @@ import { api } from '../../pages/LegacyPages'
 import { useCallback, useEffect, useState } from 'react'
 import type { School, Student, SchoolRoute, RouteStop, Bus, BusAssignment, StudentTransportAssignment, StudentTransportAssignmentForm } from '../../pages/LegacyPages'
 import { emptyStudentTransportAssignment, downloadExcelReport, downloadPdfReport } from '../../pages/LegacyPages'
-import { MoreVertical, RefreshCw, Users } from 'lucide-react'
+import { RefreshCw, Users } from 'lucide-react'
 import { DateInput, SearchInput, SelectInput, TextArea } from '../../components/ui/FormControls'
 
 export function StudentTransportAssignmentsPage({ token, setError, setNotice }: { token: string; setError: (value: string) => void; setNotice: (value: string) => void }) {
