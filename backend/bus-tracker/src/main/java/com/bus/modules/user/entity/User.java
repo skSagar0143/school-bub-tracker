@@ -9,7 +9,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "users", uniqueConstraints = @UniqueConstraint(name = "uk_users_email", columnNames = "email"))
+@Table(name = "users", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_users_login_id", columnNames = "login_id") })
 @Getter
 @Setter
 @NoArgsConstructor
@@ -21,7 +22,10 @@ public class User {
     @Column(nullable = false, length = 120)
     private String fullName;
 
-    @Column(nullable = false, unique = true, length = 180)
+    @Column(name = "login_id", length = 80)
+    private String loginId;
+
+    @Column(nullable = true, unique = true, length = 180)
     private String email;
 
     @Column(nullable = false, length = 100)

@@ -11,6 +11,8 @@ import com.bus.modules.user.entity.UserRole;
 public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByEmailIgnoreCase(String email);
     boolean existsByEmailIgnoreCase(String email);
+    Optional<User> findByLoginIdIgnoreCase(String loginId);
+    boolean existsByLoginIdIgnoreCase(String loginId);
     boolean existsByRole(UserRole role);
     List<User> findAllByRoleInOrderByCreatedAtDesc(List<UserRole> roles);
 }

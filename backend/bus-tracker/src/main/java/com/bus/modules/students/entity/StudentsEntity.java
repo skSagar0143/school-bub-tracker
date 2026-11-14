@@ -1,8 +1,8 @@
-
 package com.bus.modules.students.entity;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -23,79 +23,76 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @Table(name = "students", uniqueConstraints = {
-		@UniqueConstraint(name = "uk_school_admission_number", columnNames = { "school_id", "admission_number" }) })
+        @UniqueConstraint(name = "uk_school_admission_number", columnNames = { "school_id", "admission_number" }),
+        @UniqueConstraint(name = "uk_student_user_id", columnNames = "user_id") })
 public class StudentsEntity {
 
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-	// School information
-	@Column(name = "school_id", nullable = false)
-	private Long schoolId;
+    @Column(name = "user_id")
+    private UUID userId;
 
-	// Student personal information
-	@Column(name = "first_name", nullable = false, length = 100)
-	private String firstName;
+    @Column(name = "school_id", nullable = false)
+    private Long schoolId;
 
-	@Column(name = "last_name", length = 100)
-	private String lastName;
+    @Column(name = "first_name", nullable = false, length = 100)
+    private String firstName;
 
-	@Column(name = "admission_number", nullable = false, length = 50)
-	private String admissionNumber;
+    @Column(name = "last_name", length = 100)
+    private String lastName;
 
-	@Column(name = "date_of_birth")
-	private LocalDate dateOfBirth;
+    @Column(name = "admission_number", nullable = false, length = 50)
+    private String admissionNumber;
 
-	@Column(length = 20)
-	private String gender;
+    @Column(name = "date_of_birth")
+    private LocalDate dateOfBirth;
 
-	// Academic information
-	@Column(name = "class_name", nullable = false, length = 50)
-	private String className;
+    @Column(length = 20)
+    private String gender;
 
-	@Column(length = 20)
-	private String section;
+    @Column(name = "class_name", nullable = false, length = 50)
+    private String className;
 
-	@Column(name = "roll_number", length = 30)
-	private String rollNumber;
+    @Column(length = 20)
+    private String section;
 
-	// Parent / Guardian information
-	@Column(name = "parent_name", nullable = false, length = 150)
-	private String parentName;
+    @Column(name = "roll_number", length = 30)
+    private String rollNumber;
 
-	@Column(name = "parent_phone", nullable = false, length = 15)
-	private String parentPhone;
+    @Column(name = "parent_name", nullable = false, length = 150)
+    private String parentName;
 
-	@Column(name = "parent_email", length = 150)
-	private String parentEmail;
+    @Column(name = "parent_phone", nullable = false, length = 15)
+    private String parentPhone;
 
-	@Column(name = "emergency_contact", length = 15)
-	private String emergencyContact;
+    @Column(name = "parent_email", length = 150)
+    private String parentEmail;
 
-	// Address
-	@Column(length = 500)
-	private String address;
+    @Column(name = "emergency_contact", length = 15)
+    private String emergencyContact;
 
-	// Account status
-	@Column(nullable = false, length = 20)
-	private String status = "ACTIVE";
+    @Column(length = 500)
+    private String address;
 
-	// Audit information
-	@Column(name = "created_at", nullable = false, updatable = false)
-	private LocalDateTime createdAt;
+    @Column(nullable = false, length = 20)
+    private String status = "ACTIVE";
 
-	@Column(name = "updated_at")
-	private LocalDateTime updatedAt;
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
-	@PrePersist
-	protected void onCreate() {
-		createdAt = LocalDateTime.now();
-		updatedAt = LocalDateTime.now();
-	}
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 
-	@PreUpdate
-	protected void onUpdate() {
-		updatedAt = LocalDateTime.now();
-	}
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
 }
