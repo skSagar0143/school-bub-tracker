@@ -4,7 +4,7 @@ import { api } from '../../pages/LegacyPages'
 import { useCallback, useEffect, useState } from 'react'
 import type { Student, StudentForm } from '../../pages/LegacyPages'
 import { emptyStudent, downloadExcelReport, downloadPdfReport } from '../../pages/LegacyPages'
-import { BusFront, MoreVertical, RefreshCw, Users } from 'lucide-react'
+import { BusFront, RefreshCw, Users } from 'lucide-react'
 import { TextInput, EmailInput, PhoneInput, DateInput, SearchInput, SelectInput, TextArea } from '../../components/ui/FormControls'
 
 export function StudentsPage({ token, setError, setNotice }: { token: string; setError: (value: string) => void; setNotice: (value: string) => void }) {
