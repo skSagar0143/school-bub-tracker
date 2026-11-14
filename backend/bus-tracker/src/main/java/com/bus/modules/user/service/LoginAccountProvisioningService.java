@@ -3,10 +3,8 @@ package com.bus.modules.user.service;
 import java.security.SecureRandom;
 import java.text.Normalizer;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -66,7 +64,7 @@ public class LoginAccountProvisioningService {
             }
 
             String fullName = fullName(student.getFirstName(), student.getLastName());
-            String loginId = uniqueLoginId(fullName + student.getRollNumber());
+            String loginId = uniqueLoginId(student.getFirstName() + student.getRollNumber());
             String password = generateSixDigitPassword();
 
             User user = new User();
@@ -95,7 +93,7 @@ public class LoginAccountProvisioningService {
             }
 
             String fullName = fullName(driver.getFirstName(), driver.getLastName());
-            String loginId = uniqueLoginId(fullName + driver.getDriverCode());
+            String loginId = uniqueLoginId(driver.getFirstName() + driver.getDriverCode());
             String password = generateSixDigitPassword();
 
             User user = new User();
